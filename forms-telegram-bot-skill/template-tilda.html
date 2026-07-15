@@ -1,0 +1,183 @@
+<style>
+.anketa-wrap{background:#EEEEEE!important;padding:48px 16px!important;font-family:'Inter','Helvetica Neue',Arial,sans-serif!important;color:#0A0A0A!important;-webkit-font-smoothing:antialiased!important}
+.anketa-wrap *{box-sizing:border-box!important;margin:0;padding:0}
+.anketa{max-width:720px!important;margin:0 auto!important}
+.anketa-head{margin-bottom:40px!important}
+.anketa-h1{font-size:48px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.02em!important;margin-bottom:14px!important;color:#0A0A0A!important}
+.anketa-h1 .sub{color:#BFBFBF!important;display:block!important;font-weight:800!important}
+.anketa-lead{color:#888!important;font-size:17px!important;font-weight:500!important;max-width:520px!important}
+.anketa-form{display:flex!important;flex-direction:column!important;gap:14px!important}
+.anketa-fld{background:#fff!important;border-radius:24px!important;padding:24px 26px!important;border:1px solid transparent!important;transition:border-color .2s!important}
+.anketa-fld:focus-within{border-color:#0A0A0A!important}
+.anketa-lbl{display:block!important;font-size:17px!important;font-weight:700!important;margin-bottom:6px!important;line-height:1.3!important;color:#0A0A0A!important;letter-spacing:-.01em!important}
+.anketa-hint{color:#888!important;font-size:14px!important;margin-bottom:14px!important;font-weight:500!important;line-height:1.5!important}
+.anketa-hint code{background:#EEE!important;padding:1px 6px!important;border-radius:4px!important;font-family:monospace!important;font-size:13px!important}
+.anketa-fld input[type=text],.anketa-fld input[type=email],.anketa-fld textarea{width:100%!important;background:#EEEEEE!important;border:1px solid transparent!important;border-radius:14px!important;padding:14px 16px!important;color:#0A0A0A!important;font-size:15px!important;font-family:inherit!important;font-weight:500!important;outline:none!important}
+.anketa-fld input:focus,.anketa-fld textarea:focus{border-color:#0A0A0A!important;background:#fff!important}
+.anketa-fld textarea{min-height:96px!important;resize:vertical!important}
+.anketa-group{display:flex!important;flex-direction:column!important;gap:8px!important}
+.anketa-opt{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:14px 16px!important;background:#EEEEEE!important;border-radius:14px!important;cursor:pointer!important;transition:background .15s!important;border:1px solid transparent!important}
+.anketa-opt:hover{background:#E2E2E2!important}
+.anketa-opt:has(input:checked){background:#0A0A0A!important}
+.anketa-opt:has(input:checked) span{color:#fff!important}
+.anketa-opt input{margin-top:3px!important;accent-color:#0A0A0A!important;width:16px!important;height:16px!important;cursor:pointer!important;flex-shrink:0!important}
+.anketa-opt:has(input:checked) input{accent-color:#fff!important}
+.anketa-opt span{font-size:15px!important;font-weight:500!important;line-height:1.4!important;color:#0A0A0A!important}
+.anketa-cond{margin-top:14px!important;padding-top:14px!important;border-top:1px dashed #DDD!important;display:none!important}
+.anketa-cond.show{display:block!important}
+.anketa-consent{background:#0A0A0A!important;border-radius:24px!important;padding:28px 30px!important;color:#fff!important;margin-top:8px!important}
+.anketa-consent h3{font-size:13px!important;font-weight:700!important;margin-bottom:20px!important;color:#999!important;text-transform:uppercase!important;letter-spacing:1.2px!important}
+.anketa-cons-item{display:flex!important;align-items:flex-start!important;gap:14px!important;padding:11px 0!important;cursor:pointer!important}
+.anketa-cons-item input{margin-top:4px!important;accent-color:#fff!important;width:18px!important;height:18px!important;cursor:pointer!important;flex-shrink:0!important}
+.anketa-cons-item span{font-size:14px!important;line-height:1.5!important;color:#fff!important;font-weight:500!important}
+.anketa-cons-links{margin-top:20px!important;padding-top:20px!important;border-top:1px solid #222!important;display:flex!important;flex-direction:column!important;gap:11px!important}
+.anketa-cons-links a{color:#fff!important;text-decoration:underline!important;text-decoration-color:#999!important;text-underline-offset:4px!important;font-size:14px!important;font-weight:500!important}
+.anketa-cons-links a:hover{text-decoration-color:#fff!important}
+.anketa-btn{background:#0A0A0A!important;color:#fff!important;border:none!important;border-radius:100px!important;padding:22px 32px!important;font-size:17px!important;font-weight:700!important;cursor:pointer!important;font-family:inherit!important;letter-spacing:-.01em!important;margin-top:8px!important;transition:background .2s,opacity .2s!important}
+.anketa-btn:hover:not(:disabled){background:#1a1a1a!important}
+.anketa-btn:disabled{background:#CCC!important;color:#888!important;cursor:not-allowed!important}
+.anketa-req{color:#F26B3A!important;margin-left:3px!important}
+.anketa-status{padding:18px 22px!important;border-radius:14px!important;margin-top:14px!important;font-size:15px!important;font-weight:500!important;display:none!important;line-height:1.5!important}
+.anketa-status.show{display:block!important}
+.anketa-status.ok{background:#0A0A0A!important;color:#fff!important}
+.anketa-status.err{background:#FFE5E2!important;color:#B83228!important}
+.anketa-footer{margin-top:48px!important;padding-top:28px!important;border-top:1px solid #DDD!important;color:#888!important;font-size:13px!important;font-weight:500!important;line-height:1.7!important}.anketa-footer-links{margin-bottom:14px!important;display:flex!important;flex-wrap:wrap!important;gap:8px 24px!important}.anketa-footer-links a{color:#888!important;text-decoration:underline!important;text-underline-offset:3px!important}.anketa-footer-links a:hover{color:#0A0A0A!important}.anketa-footer-copy{color:#888!important;font-size:13px!important}.anketa-tg-wrap{position:relative!important;display:flex!important;align-items:center!important;background:#EEEEEE!important;border:1px solid transparent!important;border-radius:14px!important;transition:border-color .2s,background .2s!important;padding-left:16px!important}.anketa-tg-wrap:focus-within{border-color:#0A0A0A!important;background:#fff!important}.anketa-tg-prefix{color:#0A0A0A!important;font-size:15px!important;font-weight:600!important;margin-right:2px!important;font-family:inherit!important}.anketa-tg-wrap input{flex:1!important;background:transparent!important;border:none!important;padding:14px 16px 14px 4px!important;border-radius:0!important;outline:none!important}.anketa-tg-wrap input:focus{background:transparent!important;border:none!important}@media(max-width:600px){.anketa-h1{font-size:34px!important}.anketa-fld{padding:20px 18px!important;border-radius:20px!important}.anketa-consent{padding:22px 20px!important;border-radius:20px!important}.anketa-btn{padding:20px 24px!important;font-size:16px!important}}
+</style>
+
+<div class="anketa-wrap">
+<div class="anketa">
+<div class="anketa-head">
+<h1 class="anketa-h1">Анкета<span class="sub">на Дизайн Кэмп</span></h1>
+<p class="anketa-lead">5 минут — и я свяжусь с тобой лично в Telegram</p>
+</div>
+
+<form id="anketaForm" class="anketa-form" novalidate>
+
+<div class="anketa-fld"><label class="anketa-lbl" for="a_name">Как тебя зовут?<span class="anketa-req">*</span></label><input type="text" id="a_name" name="name" placeholder="Маша" required></div>
+
+<div class="anketa-fld"><label class="anketa-lbl" for="a_tg">Твой Telegram<span class="anketa-req">*</span></label><div class="anketa-hint">Ник через <code>@</code>, например <code>@elianora21</code>. Открой Telegram → настройки → скопируй username.</div><div class="anketa-tg-wrap"><span class="anketa-tg-prefix">@</span><input type="text" id="a_tg" name="tg" placeholder="elianora21" required pattern="[A-Za-z0-9_]{3,32}" title="Только латинские буквы, цифры и подчёркивания. От 3 до 32 символов."></div></div>
+
+<div class="anketa-fld"><label class="anketa-lbl" for="a_email">Email для доступа к материалам<span class="anketa-req">*</span></label><div class="anketa-hint">Та, которая всегда под рукой — туда придут все ссылки.</div><input type="email" id="a_email" name="email" placeholder="masha@yandex.ru" required></div>
+
+<div class="anketa-fld"><label class="anketa-lbl">Ты уже учился у меня раньше?<span class="anketa-req">*</span></label>
+<div class="anketa-group">
+<label class="anketa-opt"><input type="radio" name="student" value="Да, на платных программах" required><span>Да, я был на платных программах</span></label>
+<label class="anketa-opt"><input type="radio" name="student" value="Да, на бесплатных интенсивах"><span>Да, я был на бесплатных интенсивах</span></label>
+<label class="anketa-opt"><input type="radio" name="student" value="Нет, впервые"><span>Нет, пришёл впервые</span></label>
+<label class="anketa-opt"><input type="radio" name="student" value="Не помню"><span>Не помню точно, давно это было</span></label>
+</div>
+<div class="anketa-cond" id="a_cond"><label class="anketa-lbl" for="a_prog" style="margin-top:8px">На какой программе и в каком году?</label><div class="anketa-hint">Например: «Базовый курс, 2023», «Интенсив Тильда, осень 2022»</div><input type="text" id="a_prog" name="program" placeholder="Название и год"></div>
+</div>
+
+<div class="anketa-fld"><label class="anketa-lbl">Чем ты сейчас занимаешься?<span class="anketa-req">*</span></label>
+<div class="anketa-group">
+<label class="anketa-opt"><input type="radio" name="now" value="Дизайн (фриланс/студия)" required><span>Работаю в дизайне (фриланс или студия)</span></label>
+<label class="anketa-opt"><input type="radio" name="now" value="Дизайн (in-house)"><span>Работаю в дизайне на найме (in-house)</span></label>
+<label class="anketa-opt"><input type="radio" name="now" value="Дизайн как доп"><span>Дизайн не основная работа, но проекты на стороне</span></label>
+<label class="anketa-opt"><input type="radio" name="now" value="Не работаю в дизайне"><span>Сейчас не работаю в дизайне, планирую вернуться</span></label>
+<label class="anketa-opt"><input type="radio" name="now" value="Другая сфера"><span>Работаю в другой сфере, дизайн интересен</span></label>
+<label class="anketa-opt"><input type="radio" name="now" value="Хочу с нуля"><span>Хочу с нуля войти в профессию</span></label>
+</div>
+</div>
+
+<div class="anketa-fld"><label class="anketa-lbl">Какой у тебя сейчас уровень?<span class="anketa-req">*</span></label>
+<div class="anketa-group">
+<label class="anketa-opt"><input type="radio" name="level" value="Новичок" required><span>Совсем новичок, ещё не пробовал</span></label>
+<label class="anketa-opt"><input type="radio" name="level" value="0-6 мес"><span>Первые шаги: 0–6 месяцев</span></label>
+<label class="anketa-opt"><input type="radio" name="level" value="6 мес – 2 года"><span>Уже что-то умею: 6 месяцев – 2 года</span></label>
+<label class="anketa-opt"><input type="radio" name="level" value="2-5 лет"><span>Опытный: 2–5 лет</span></label>
+<label class="anketa-opt"><input type="radio" name="level" value="5+ лет"><span>Сильный профи: 5+ лет</span></label>
+</div>
+</div>
+
+<div class="anketa-fld"><label class="anketa-lbl">С чем хочешь работать с нейросетями?<span class="anketa-req">*</span></label><div class="anketa-hint">Можно выбрать несколько вариантов.</div>
+<div class="anketa-group">
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Сайты под ключ"><span>Сайты под ключ (Claude Code и другие ИИ)</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Анимация и моушен"><span>Дорогая анимация и моушен-дизайн</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Видео и ролики"><span>Видео и кинематографические ролики</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="AI фото и ассеты"><span>AI-обработка фото и генерация ассетов</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Промпт-инжиниринг"><span>Промпт-инжиниринг и работа с нейросетями</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Понять весь спектр"><span>Хочу понять весь спектр и потом выбрать</span></label>
+<label class="anketa-opt"><input type="checkbox" name="goals" value="Насмотренность и идеи"><span>Прокачать общую насмотренность и идеи</span></label>
+</div>
+</div>
+
+<div class="anketa-fld"><label class="anketa-lbl">Какой у тебя сейчас уровень дохода?<span class="anketa-req">*</span></label><div class="anketa-hint">Нужно мне, чтобы понимать какие предложения тебе подходят. Никому не показывается.</div>
+<div class="anketa-group">
+<label class="anketa-opt"><input type="radio" name="income" value="до 50к" required><span>До 50к в месяц / только начинаю</span></label>
+<label class="anketa-opt"><input type="radio" name="income" value="50-100к"><span>50–100к</span></label>
+<label class="anketa-opt"><input type="radio" name="income" value="100-200к"><span>100–200к</span></label>
+<label class="anketa-opt"><input type="radio" name="income" value="200-400к"><span>200–400к</span></label>
+<label class="anketa-opt"><input type="radio" name="income" value="400к+"><span>400к и выше</span></label>
+<label class="anketa-opt"><input type="radio" name="income" value="не делюсь"><span>Не хочу делиться</span></label>
+</div>
+</div>
+
+<div class="anketa-fld"><label class="anketa-lbl" for="a_exp">Что было бы главным результатом Кэмпа?</label><div class="anketa-hint">Опционально. В свободной форме.</div><textarea id="a_exp" name="expectations" placeholder="Например: научиться делать сайты с ИИ, собрать сильное портфолио, найти клиентов на чеки 100к+..."></textarea></div>
+
+<div class="anketa-consent">
+<h3>Согласия</h3>
+<label class="anketa-cons-item"><input type="checkbox" name="c1" required><span>Соглашаюсь с Политикой конфиденциальности</span></label>
+<label class="anketa-cons-item"><input type="checkbox" name="c2" required><span>Соглашаюсь получать информационные и рекламные сообщения (рассылки в Telegram, email и других каналах)</span></label>
+<label class="anketa-cons-item"><input type="checkbox" name="c3" required><span>Я согласен(а) на обработку моих персональных данных. С Политикой обработки персональных данных ознакомлен(а)</span></label>
+<div class="anketa-cons-links">
+<a href="https://derzayvdesign.com/politicaprivacy" target="_blank">Политика конфиденциальности</a>
+<a href="https://derzayvdesign.com/soglasierassilka" target="_blank">Согласие на получение информационных и рекламных сообщений</a>
+<a href="https://derzayvdesign.com/soglasienaobraborku" target="_blank">Согласие на обработку персональных данных</a>
+</div>
+</div>
+
+<button type="submit" class="anketa-btn" id="a_btn" disabled>Отправить анкету</button>
+<div class="anketa-status" id="a_status"></div>
+
+
+<div class="anketa-footer">
+<div class="anketa-footer-links">
+<a href="https://derzayvdesign.com/politicaprivacy" target="_blank">Политика конфиденциальности</a>
+<a href="https://derzayvdesign.com/soglasienaobraborku" target="_blank">Согласие на обработку персональных данных</a>
+<a href="https://derzayvdesign.com/soglasierassilka" target="_blank">Согласие на рассылку</a>
+<a href="https://derzayvdesign.com/oferta" target="_blank">Договор оферты</a>
+</div>
+<div class="anketa-footer-copy">© DD Academy · <a href="https://derzayvdesign.com" target="_blank">derzayvdesign.com</a></div>
+</div>
+
+</form>
+</div>
+</div>
+
+<script>
+(function(){
+var TOKEN="8608450294:AAFuBjZMCcAhucGmbIj50N7JnieK5CRlV9M",CHAT="474424104";
+var f=document.getElementById('anketaForm'),btn=document.getElementById('a_btn'),st=document.getElementById('a_status');
+document.querySelectorAll('input[name=student]').forEach(function(r){r.addEventListener('change',function(){document.getElementById('a_cond').classList.toggle('show',r.checked&&r.value.indexOf('Да')===0)})});
+var cs=f.querySelectorAll('input[name^=c]');
+function upd(){btn.disabled=!Array.from(cs).every(function(c){return c.checked})}
+cs.forEach(function(c){c.addEventListener('change',upd)});
+function ss(m,t){st.textContent=m;st.className='anketa-status show '+t}
+f.addEventListener('submit',function(e){
+e.preventDefault();
+if(!f.checkValidity()){ss('Проверь заполнение всех обязательных полей','err');f.reportValidity();return}
+btn.disabled=true;btn.textContent='Отправляю...';
+var fd=new FormData(f),goals=fd.getAll('goals');
+var txt='НОВАЯ ЗАЯВКА НА КЭМП\n\n'+
+'Имя: '+(fd.get('name')||'-')+'\n'+
+'Telegram: '+(fd.get('tg')?'@'+fd.get('tg').replace(/^@/,''):'-')+'\n'+
+'Email: '+(fd.get('email')||'-')+'\n\n'+
+'Ученик: '+(fd.get('student')||'-')+'\n'+
+(fd.get('program')?'Программа: '+fd.get('program')+'\n':'')+
+'Сейчас: '+(fd.get('now')||'-')+'\n'+
+'Опыт: '+(fd.get('level')||'-')+'\n'+
+'Цели с ИИ: '+(goals.length?goals.join(', '):'-')+'\n'+
+'Доход: '+(fd.get('income')||'-')+'\n\n'+
+(fd.get('expectations')?'Ожидания: '+fd.get('expectations')+'\n\n':'')+
+'Согласия: Политика, Рассылки, ПДн\n'+new Date().toLocaleString('ru-RU');
+fetch('https://api.telegram.org/bot'+TOKEN+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:CHAT,text:txt})})
+.then(function(r){return r.json()})
+.then(function(d){
+if(d.ok){ss('Спасибо! Я получила твою заявку. Напишу тебе в Telegram в ближайшее время.','ok');f.reset();btn.textContent='Отправлено';document.getElementById('a_cond').classList.remove('show')}
+else{throw new Error(d.description||'err')}
+})
+.catch(function(){ss('Не удалось отправить заявку. Напиши мне в Telegram: @elianora21','err');btn.disabled=false;btn.textContent='Отправить анкету'})
+});
+})();
+</script>

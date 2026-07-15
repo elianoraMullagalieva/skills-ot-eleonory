@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анкета — Дизайн Кэмп · Дерзай в Дизайн</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #EEEEEE;
+    --card: #FFFFFF;
+    --card-dark: #0A0A0A;
+    --border: #DDDDDD;
+    --border-dark: #222222;
+    --text: #0A0A0A;
+    --text-dim: #888888;
+    --text-light: #BFBFBF;
+    --text-on-dark: #FFFFFF;
+    --text-on-dark-dim: #999999;
+    --accent: #0A0A0A;
+    --accent-hover: #222222;
+    --error: #E0463C;
+    --success: #2ECC71;
+    --orange: #F26B3A;
+    --purple: #7C3AED;
+  }
+
+  html, body { background: var(--bg); }
+
+  body {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 60px 20px 40px;
+    -webkit-font-smoothing: antialiased;
+    font-weight: 500;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; }
+
+  /* HEADER */
+  header { margin-bottom: 48px; }
+  .logo { font-weight: 800; font-size: 14px; letter-spacing: 0.5px; margin-bottom: 28px; }
+  .logo .dot { color: var(--orange); }
+  h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  h1 .sub { color: var(--text-light); display: block; font-weight: 800; }
+  header p.lead {
+    color: var(--text-dim);
+    font-size: 17px;
+    margin-top: 14px;
+    max-width: 520px;
+  }
+
+  /* FORM */
+  form { display: flex; flex-direction: column; gap: 16px; }
+
+  .field {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 26px 28px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .field:focus-within { border-color: var(--text); }
+
+  .field label.q-label {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  .field .q-hint { color: var(--text-dim); font-size: 14px; margin-bottom: 16px; line-height: 1.5; }
+  .field .q-hint code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 13px; }
+
+  .field input[type="text"],
+  .field input[type="email"],
+  .field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 500;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--text); background: #fff; }
+  .field input::placeholder, .field textarea::placeholder { color: var(--text-light); }
+  .field textarea { min-height: 100px; resize: vertical; }
+
+  .radio-group, .check-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .opt:hover { background: #E2E2E2; }
+  .opt:has(input:checked) { background: var(--card-dark); color: var(--text-on-dark); }
+  .opt:has(input:checked) span { color: var(--text-on-dark); }
+  .opt input { margin-top: 3px; cursor: pointer; accent-color: var(--text); flex-shrink: 0; width: 16px; height: 16px; }
+  .opt:has(input:checked) input { accent-color: var(--text-on-dark); }
+  .opt span { font-size: 15px; font-weight: 500; line-height: 1.4; }
+
+  .conditional {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    display: none;
+  }
+  .conditional.show { display: block; }
+
+  /* CONSENT BLOCK - чёрный, как блок «Полезная встреча» на сайте */
+  .consent-block {
+    background: var(--card-dark);
+    border-radius: 24px;
+    padding: 30px 32px;
+    color: var(--text-on-dark);
+    margin-top: 12px;
+  }
+  .consent-block h3 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 22px;
+    color: var(--text-on-dark-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+  .consent-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    cursor: pointer;
+  }
+  .consent-item input {
+    margin-top: 4px;
+    accent-color: var(--text-on-dark);
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  .consent-item span { font-size: 14px; line-height: 1.5; font-weight: 500; }
+
+  .consent-links {
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border-dark);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .consent-links a {
+    color: var(--text-on-dark);
+    text-decoration: underline;
+    text-decoration-color: var(--text-on-dark-dim);
+    text-underline-offset: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: text-decoration-color 0.2s;
+    font-weight: 500;
+  }
+  .consent-links a:hover { text-decoration-color: var(--text-on-dark); }
+
+  /* SUBMIT - белая пилюля как «Записаться» */
+  button.submit {
+    background: var(--card-dark);
+    color: var(--text-on-dark);
+    border: none;
+    border-radius: 100px;
+    padding: 22px 32px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    margin-top: 8px;
+  }
+  button.submit:hover:not(:disabled) { background: #1a1a1a; }
+  button.submit:active:not(:disabled) { transform: scale(0.99); }
+  button.submit:disabled { background: #CCCCCC; color: #888888; cursor: not-allowed; }
+
+  .required-mark { color: var(--orange); margin-left: 3px; }
+
+  .status-msg {
+    padding: 18px 22px;
+    border-radius: 14px;
+    margin-top: 16px;
+    font-size: 15px;
+    font-weight: 500;
+    display: none;
+    line-height: 1.5;
+  }
+  .status-msg.show { display: block; }
+  .status-msg.success { background: var(--card-dark); color: var(--text-on-dark); }
+  .status-msg.error { background: #FFE5E2; color: #B83228; border: 1px solid #F5BFB9; }
+
+  /* FOOTER */
+  footer {
+    max-width: 720px;
+    margin: 80px auto 0;
+    padding: 32px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  footer a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
+  footer a:hover { color: var(--text); }
+  footer .footer-links {
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+  }
+  footer .copy { font-size: 13px; }
+
+  @media (max-width: 600px) {
+    body { padding: 36px 14px 28px; }
+    h1 { font-size: 36px; }
+    .field { padding: 22px 20px; border-radius: 20px; }
+    .consent-block { padding: 24px 22px; border-radius: 20px; }
+    button.submit { padding: 20px 24px; font-size: 16px; }
+    header { margin-bottom: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="logo">DD<span class="dot">.</span> ACADEMY</div>
+    <h1>
+      Анкета
+      <span class="sub">на Дизайн Кэмп</span>
+    </h1>
+    <p class="lead">5 минут — и я свяжусь с тобой лично в Telegram</p>
+  </header>
+
+  <form id="form" novalidate>
+
+    <!-- 1. Имя -->
+    <div class="field">
+      <label class="q-label" for="name">Как тебя зовут?<span class="required-mark">*</span></label>
+      <input type="text" id="name" name="name" placeholder="Маша" required>
+    </div>
+
+    <!-- 2. Telegram -->
+    <div class="field">
+      <label class="q-label" for="tg">Ссылка на твой Telegram<span class="required-mark">*</span></label>
+      <div class="q-hint">Именно ссылка вида <code>t.me/твой_ник</code>, чтобы я добавила тебя в чат Кэмпа без потерь. Открой Telegram → настройки профиля → скопируй username.</div>
+      <input type="text" id="tg" name="tg" placeholder="t.me/elianora_design" required>
+    </div>
+
+    <!-- 3. Email -->
+    <div class="field">
+      <label class="q-label" for="email">Email для доступа к материалам<span class="required-mark">*</span></label>
+      <div class="q-hint">Желательно та, которая всегда под рукой — туда придут все ссылки и приглашения.</div>
+      <input type="email" id="email" name="email" placeholder="masha@yandex.ru" required>
+    </div>
+
+    <!-- 4. Был ли учеником + условное поле -->
+    <div class="field">
+      <label class="q-label">Ты уже учился у меня раньше?<span class="required-mark">*</span></label>
+      <div class="radio-group">
+        <label class="opt"><input type="radio" name="student" value="Да, я был на платных программах" required><span>Да, я был на платных программах</span></label>
+        <label class="opt"><input type="radio" name="student" value="Да, я был на бесплатных интенсивах"><span>Да, я был на бесплатных интенсивах</span></label>
+        <label class="opt"><input type="radio" name="student" value="Нет, пришёл впервые"><span>Нет, пришёл впервые</span></label>
+        <label class="opt"><input type="radio" name="student" value="Не помню точно, давно это было"><span>Не помню точно, давно это было</span></label>
+      </div>
+      <div class="conditional" id="student-details">
+        <label class="q-label" for="program" style="margin-top: 8px;">На какой программе или интенсиве и в каком году?</label>
+        <div class="q-hint">Например: «Базовый курс веб-дизайна, 2023», «Интенсив Тильда, осень 2022»</div>
+        <input type="text" id="program" name="program" placeholder="Название и год">
+      </div>
+    </div>
+
+    <!-- 5. Чем сейчас занимаешься -->
+    <div class="field">
+      <label class="q-label">Чем ты сейчас занимаешься?<span class="required-mark">*</span></label>
+      <div class="radio-group">
+        <label class="opt"><input type="radio" name="now" value="Работаю в дизайне (фриланс или студия)" required><span>Работаю в дизайне (фриланс или студия)</span></label>
+        <label class="opt"><input type="radio" name="now" value="Работаю в дизайне на найме (in-house)"><span>Работаю в дизайне на найме (in-house)</span></label>
+        <label class="opt"><input type="radio" name="now" value="Дизайн не основная работа, но делаю проекты на стороне"><span>Дизайн не основная работа, но делаю проекты на стороне</span></label>
+        <label class="opt"><input type="radio" name="now" value="Сейчас не работаю в дизайне, но планирую вернуться"><span>Сейчас не работаю в дизайне, но планирую вернуться</span></label>
+        <label class="opt"><input type="radio" name="now" value="Работаю в другой сфере, дизайн интересен для развития"><span>Работаю в другой сфере, дизайн интересен для развития</span></label>
+        <label class="opt"><input type="radio" name="now" value="Хочу с нуля войти в профессию"><span>Хочу с нуля войти в профессию</span></label>
+      </div>
+    </div>
+
+    <!-- 6. Опыт -->
+    <div class="field">
+      <label class="q-label">Какой у тебя сейчас уровень в дизайне?<span class="required-mark">*</span></label>
+      <div class="radio-group">
+        <label class="opt"><input type="radio" name="level" value="Совсем новичок" required><span>Совсем новичок, ещё не пробовал</span></label>
+        <label class="opt"><input type="radio" name="level" value="Первые шаги: 0–6 месяцев"><span>Первые шаги: 0–6 месяцев</span></label>
+        <label class="opt"><input type="radio" name="level" value="Уже что-то умею: 6 мес – 2 года"><span>Уже что-то умею: 6 месяцев – 2 года</span></label>
+        <label class="opt"><input type="radio" name="level" value="Опытный: 2–5 лет"><span>Опытный: 2–5 лет</span></label>
+        <label class="opt"><input type="radio" name="level" value="Сильный профи: 5+ лет"><span>Сильный профи: 5+ лет</span></label>
+      </div>
+    </div>
+
+    <!-- 7. Цели с нейросетями (multi) -->
+    <div class="field">
+      <label class="q-label">С чем хочешь научиться работать с нейросетями?<span class="required-mark">*</span></label>
+      <div class="q-hint">Можно выбрать несколько вариантов.</div>
+      <div class="check-group">
+        <label class="opt"><input type="checkbox" name="goals[]" value="Сайты под ключ (с Claude Code и другими ИИ)"><span>Сайты под ключ (с Claude Code и другими ИИ)</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="Дорогая анимация и моушен-дизайн"><span>Дорогая анимация и моушен-дизайн</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="Видео и кинематографические ролики для сайтов"><span>Видео и кинематографические ролики для сайтов</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="AI-обработка фото и генерация ассетов"><span>AI-обработка фото и генерация ассетов</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="Промпт-инжиниринг и работа с разными нейросетями"><span>Промпт-инжиниринг и работа с разными нейросетями</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="Хочу понять весь спектр и потом выбрать"><span>Хочу понять весь спектр и потом выбрать</span></label>
+        <label class="opt"><input type="checkbox" name="goals[]" value="Хочу прокачать общую насмотренность и идеи"><span>Хочу прокачать общую насмотренность и идеи</span></label>
+      </div>
+    </div>
+
+    <!-- 8. Уровень дохода -->
+    <div class="field">
+      <label class="q-label">Какой у тебя сейчас уровень дохода от работы?<span class="required-mark">*</span></label>
+      <div class="q-hint">Это нужно мне только чтобы понимать, какие предложения тебе подходят. Никому из учеников эта информация не показывается.</div>
+      <div class="radio-group">
+        <label class="opt"><input type="radio" name="income" value="До 50к / только начинаю" required><span>До 50к в месяц / только начинаю</span></label>
+        <label class="opt"><input type="radio" name="income" value="50–100к"><span>50–100к</span></label>
+        <label class="opt"><input type="radio" name="income" value="100–200к"><span>100–200к</span></label>
+        <label class="opt"><input type="radio" name="income" value="200–400к"><span>200–400к</span></label>
+        <label class="opt"><input type="radio" name="income" value="400к+"><span>400к и выше</span></label>
+        <label class="opt"><input type="radio" name="income" value="Не хочу делиться"><span>Не хочу делиться этой информацией</span></label>
+      </div>
+    </div>
+
+    <!-- 9. Что ждёшь -->
+    <div class="field">
+      <label class="q-label" for="expectations">Что было бы главным результатом Кэмпа?</label>
+      <div class="q-hint">Опционально. В свободной форме. Это поможет мне адаптировать программу под живых людей.</div>
+      <textarea id="expectations" name="expectations" placeholder="Например: научиться делать сайты с ИИ, собрать сильное портфолио, найти клиентов на чеки 100к+..."></textarea>
+    </div>
+
+    <!-- СОГЛАСИЯ -->
+    <div class="consent-block">
+      <h3>Согласия</h3>
+
+      <label class="consent-item">
+        <input type="checkbox" name="consent_privacy" required>
+        <span>Соглашаюсь с Политикой конфиденциальности</span>
+      </label>
+
+      <label class="consent-item">
+        <input type="checkbox" name="consent_marketing" required>
+        <span>Соглашаюсь получать информационные и рекламные сообщения (рассылки в Telegram, email и других каналах)</span>
+      </label>
+
+      <label class="consent-item">
+        <input type="checkbox" name="consent_pd" required>
+        <span>Я согласен(а) на обработку моих персональных данных. С Политикой обработки персональных данных ознакомлен(а)</span>
+      </label>
+
+      <div class="consent-links">
+        <a href="https://derzayvdesign.com/politicaprivacy" target="_blank" rel="noopener">Политика конфиденциальности</a>
+        <a href="https://derzayvdesign.com/soglasierassilka" target="_blank" rel="noopener">Согласие на получение информационных и рекламных сообщений</a>
+        <a href="https://derzayvdesign.com/soglasienaobraborku" target="_blank" rel="noopener">Согласие на обработку персональных данных</a>
+      </div>
+    </div>
+
+    <button type="submit" class="submit" id="submit-btn" disabled>Отправить анкету</button>
+
+    <div class="status-msg" id="status"></div>
+
+  </form>
+
+</div>
+
+<footer>
+  <div class="container" style="margin: 0 auto;">
+    <div class="footer-links">
+      <a href="https://derzayvdesign.com/politicaprivacy" target="_blank" rel="noopener">Политика конфиденциальности</a>
+      <a href="https://derzayvdesign.com/soglasienaobraborku" target="_blank" rel="noopener">Согласие на обработку персональных данных</a>
+      <a href="https://derzayvdesign.com/soglasierassilka" target="_blank" rel="noopener">Согласие на рассылку</a>
+      <a href="https://derzayvdesign.com/oferta" target="_blank" rel="noopener">Договор оферты</a>
+    </div>
+    <div class="copy">© DD Academy · <a href="https://derzayvdesign.com" target="_blank" rel="noopener">derzayvdesign.com</a></div>
+  </div>
+</footer>
+
+<script>
+  // ============================================
+  // НАСТРОЙКА: подставлено
+  // ============================================
+  const TG_BOT_TOKEN = "8608450294:AAFuBjZMCcAhucGmbIj50N7JnieK5CRlV9M";
+  const TG_CHAT_ID   = "474424104";
+  // ============================================
+
+  const form = document.getElementById('form');
+  const submitBtn = document.getElementById('submit-btn');
+  const statusBox = document.getElementById('status');
+
+  // Условное поле для бывших ученика
+  document.querySelectorAll('input[name="student"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const showDetails = r.value.startsWith('Да');
+      const block = document.getElementById('student-details');
+      block.classList.toggle('show', r.checked && showDetails);
+    });
+  });
+
+  // Активация кнопки только когда все 3 галочки согласия отмечены
+  const consents = form.querySelectorAll('input[name^="consent_"]');
+  function updateBtn() {
+    const allChecked = Array.from(consents).every(c => c.checked);
+    submitBtn.disabled = !allChecked;
+  }
+  consents.forEach(c => c.addEventListener('change', updateBtn));
+
+  function showStatus(message, type = 'success') {
+    statusBox.textContent = message;
+    statusBox.className = 'status-msg show ' + type;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!form.checkValidity()) {
+      showStatus('Проверь заполнение всех обязательных полей', 'error');
+      form.reportValidity();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Отправляю...';
+
+    const fd = new FormData(form);
+    const goals = fd.getAll('goals[]');
+
+    const lines = [
+      '📝 *НОВАЯ ЗАЯВКА НА КЭМП*',
+      '',
+      `👤 *Имя:* ${fd.get('name') || '—'}`,
+      `📱 *Telegram:* ${fd.get('tg') || '—'}`,
+      `📧 *Email:* ${fd.get('email') || '—'}`,
+      '',
+      `🎓 *Ученик:* ${fd.get('student') || '—'}`,
+      fd.get('program') ? `   ↳ Программа: ${fd.get('program')}` : null,
+      `💼 *Сейчас:* ${fd.get('now') || '—'}`,
+      `⏱ *Опыт:* ${fd.get('level') || '—'}`,
+      `🤖 *Цели с ИИ:* ${goals.length ? goals.join(', ') : '—'}`,
+      `💰 *Доход:* ${fd.get('income') || '—'}`,
+      '',
+      fd.get('expectations') ? `💭 *Ожидания:*\n${fd.get('expectations')}` : null,
+      '',
+      `✅ Согласия: Политика конфиденциальности · Рассылки · ПДн`,
+      `🕐 ${new Date().toLocaleString('ru-RU')}`,
+    ].filter(Boolean).join('\n');
+
+    const tgUrl = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
+
+    try {
+      const res = await fetch(tgUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          chat_id: TG_CHAT_ID,
+          text: lines,
+          parse_mode: 'Markdown',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        showStatus('✅ Спасибо! Я получила твою заявку. Напишу тебе в Telegram в ближайшее время.', 'success');
+        form.reset();
+        submitBtn.textContent = 'Отправлено';
+        document.getElementById('student-details').classList.remove('show');
+      } else {
+        throw new Error(data.description || 'Ошибка отправки');
+      }
+    } catch (err) {
+      console.error(err);
+      showStatus('Не удалось отправить заявку. Напиши мне в Telegram: @elianora21', 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Отправить анкету';
+    }
+  });
+</script>
+
+</body>
+</html>

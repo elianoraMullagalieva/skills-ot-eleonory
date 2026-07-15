@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Reels scene — template</title>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<style>
+  /* ПУТЬ К ШРИФТАМ: поправь ../_fonts на актуальный при копировании в проект */
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Light.ttf');font-weight:300;}
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Bold.ttf');font-weight:700;}
+  @font-face{font-family:'JB';src:url('../_fonts/JetBrainsMono.ttf');}
+
+  :root{
+    /* === РОВНО 3 размера. Не добавлять четвёртый. === */
+    --t-hero:150px; --t-mid:64px; --t-cap:40px;
+    /* === цвета === */
+    --bg1:#f4f5f3; --bg2:#eaebe9; --ink:#1a1c1b; --mut:#a3a8a2; --accent:#c96442; --dark:#141615;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000;overflow:hidden;font-family:'Manrope',sans-serif;}
+  .stage{position:relative;width:1080px;height:1920px;margin:0 auto;overflow:hidden;
+    transform-origin:top center;background:linear-gradient(170deg,var(--bg1),var(--bg2));transition:background .45s;}
+  .stage.dark{background:var(--dark);}
+  .safe{position:absolute;top:0;left:0;right:0;height:1040px;overflow:hidden;}
+
+  /* угловой декор — единственное место с JetBrains Mono */
+  .mono{font-family:'JB','SF Mono',ui-monospace,monospace;font-size:23px;letter-spacing:2px;color:var(--mut);position:absolute;opacity:0;z-index:5;}
+  .mono.tl{top:70px;left:70px;} .mono.tr{top:70px;right:70px;}
+  .stage.dark .mono{color:#6d6a5e;}
+
+  /* РОВНО 2 жирности: 700 hero/акцент, 300 всё вторичное */
+  .hero{font-weight:700;font-size:var(--t-hero);color:var(--ink);letter-spacing:-3px;line-height:.98;}
+  .mid {font-weight:300;font-size:var(--t-mid);color:var(--ink);letter-spacing:-1px;line-height:1.1;}
+  .cap {font-weight:300;font-size:var(--t-cap);color:var(--mut);letter-spacing:0;}
+  .acc{color:var(--accent);}
+  .stage.dark .hero,.stage.dark .mid{color:#f4f1e8;}
+
+  /* подпись скилла: «скилл» терракотом, номер серым */
+  .label{font-weight:700;font-size:30px;letter-spacing:3px;color:var(--mut);}
+  .label b{color:var(--accent);font-weight:700;}
+
+  .scene{position:absolute;inset:0;text-align:center;}
+  /* фаза = абсолютный слой по центру (чтобы скрытая фаза не сдвигала композицию) */
+  .phase{position:absolute;top:0;left:0;width:1080px;height:1040px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 90px;gap:0;}
+  .label.top{position:absolute;top:150px;left:0;right:0;opacity:0;}
+
+  /* список: ОДНО слово на строку, по центру, каждое hero-размером */
+  .stack{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .stack .item{font-weight:700;font-size:var(--t-hero);color:var(--ink);letter-spacing:-3px;line-height:1;opacity:0;}
+  .stack .item .dot{color:var(--accent);}
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="safe">
+      <div class="mono tl" id="mtl">claude code · skills</div>
+      <div class="mono tr" id="mtr">[ 100k+ ]</div>
+
+      <section class="scene" id="s">
+        <div class="label top" id="lbl"><b>скилл</b> 00</div>
+        <!-- контент сюда -->
+      </section>
+    </div>
+  </div>
+<script>
+  const stage=document.getElementById('stage');
+  function fit(){stage.style.transform='scale('+Math.min(innerWidth/1080,innerHeight/1920)+')';}
+  addEventListener('resize',fit);fit();
+  const light=()=>stage.classList.remove('dark'), dark=()=>stage.classList.add('dark');
+
+  // хелпер: печать текста в терминале (второй span строки .row)
+  function typeRow(rowEl,text,per,cb){const el=rowEl.querySelectorAll('span')[1];let i=0;el.textContent='';
+    const t=setInterval(()=>{el.textContent=text.slice(0,++i);if(i>=text.length){clearInterval(t);cb&&cb();}},per);}
+  // хелпер: счётчик-набегание
+  function counter(el,to,dur){const o={v:0};anime({targets:o,v:to,duration:dur,round:1,easing:'easeOutExpo',
+    update:()=>el.textContent=o.v.toLocaleString('ru-RU')});}
+  // хелпер: микро-дыхание против застывания
+  function breathe(sel){anime({targets:sel,translateY:[0,-10,0],duration:2200,easing:'easeInOutSine',loop:true});}
+
+  let master;
+  function build(){
+    master=anime.timeline({autoplay:false,easing:'easeOutExpo'});
+    master.add({targets:['#mtl','#mtr'],opacity:[0,1],translateY:[-12,0],duration:450,delay:anime.stagger(120)});
+    master.add({targets:'#lbl',opacity:[0,1],translateY:[-14,0],duration:450},'-=150');
+    // === сцены сюда ===
+    window.master=master;
+  }
+  window.startAnimation=function(){if(!master)build();master.restart();};
+  const qa=new URLSearchParams(location.search).get('qa');
+  build();if(qa!=='1')master.play();
+</script>
+</body>
+</html>

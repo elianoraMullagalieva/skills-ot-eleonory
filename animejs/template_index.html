@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Анимация — Reels</title>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0a12;
+    --ink:#f5f0e6;
+    --ink-dim:#8a8276;
+    --gold:#f4c430;
+    --red:#e63946;
+    --green:#5cb85c;
+    --green-glow:#7ee08a;
+    --blue:#4ea8de;
+    --muted:#3a3a48;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000;color:var(--ink);font-family:'Helvetica Neue','Inter',Arial,sans-serif;overflow:hidden}
+  .stage{
+    position:relative;
+    width:1080px;height:1920px;
+    background:radial-gradient(ellipse at center, #14142a 0%, var(--bg) 60%, #050509 100%);
+    margin:0 auto;
+    overflow:hidden;
+    transform-origin:top center;
+  }
+  .scene{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;
+  }
+  .center{
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    gap:30px;width:100%;height:100%;padding:120px 90px;text-align:center;
+  }
+
+  /* ====== ТЕКСТ ПОВЕРХ ГРАФИКИ ======
+     Если подпись лежит над сеткой/графиком — используйте .top-text / .bottom-text.
+     Тёмный градиент-плашка гарантирует читаемость на любом zoom/массе элементов.
+     Правило Ули: max 3-4 строки на блок. */
+  .top-text{
+    position:absolute;left:0;right:0;top:0;z-index:10;
+    text-align:center;padding:90px 80px 70px;
+    font-size:58px;font-weight:800;line-height:1.16;
+    color:var(--ink);letter-spacing:-0.4px;
+    opacity:0;
+    background:linear-gradient(to bottom,
+      rgba(10,10,18,0.92) 0%,
+      rgba(10,10,18,0.88) 65%,
+      rgba(10,10,18,0) 100%);
+  }
+  .bottom-text{
+    position:absolute;left:0;right:0;bottom:0;z-index:10;
+    text-align:center;padding:70px 80px 90px;
+    opacity:0;
+    background:linear-gradient(to top,
+      rgba(10,10,18,0.92) 0%,
+      rgba(10,10,18,0.88) 65%,
+      rgba(10,10,18,0) 100%);
+  }
+  .top-text .accent, .bottom-text .accent{color:var(--gold);}
+  .top-text .accent-red{color:var(--red);}
+  .top-text .accent-green{color:var(--green-glow);}
+
+  /* ====== СИЛУЭТ-ЧЕЛОВЕЧЕК (для статистики/массы) ======
+     Использовать так:
+       <div class="person"></div>
+     Внутри grid из множества .person — для визуализации массы людей.
+     НЕ использовать как одиночную иконку — это нарушает правило Ули
+     «никаких мультяшных иконок-человечков». Только для массовой инфографики. */
+  .person{
+    position:relative;width:100%;height:100%;
+    opacity:0;transform:scale(0.4);
+    --c:var(--gold);
+  }
+  .person::before{
+    content:'';position:absolute;
+    top:6%;left:50%;transform:translateX(-50%);
+    width:34%;height:30%;
+    background:var(--c);
+    border-radius:50%;
+  }
+  .person::after{
+    content:'';position:absolute;
+    top:40%;left:50%;transform:translateX(-50%);
+    width:78%;height:54%;
+    background:var(--c);
+    border-radius:50% 50% 18% 18% / 38% 38% 18% 18%;
+  }
+  .person.you{--c:var(--green);z-index:20;}
+  .person.you::before{box-shadow:0 0 18px var(--green-glow);}
+  .person.you::after{box-shadow:0 0 22px var(--green-glow);}
+
+  /* ====== ЦИФРА-АКЦЕНТ ======
+     Гигантская цифра во весь кадр — главный приём для Reels.
+     ВСЕГДА используйте цифры, не слова. «92%», не «девяносто два процента». */
+  .huge-num{
+    font-size:300px;font-weight:900;line-height:0.95;letter-spacing:-10px;
+    color:var(--gold);
+    text-shadow:0 0 60px rgba(244,196,48,0.35);
+  }
+
+  /* ====== ПЛАШКА-ИТОГ ====== */
+  .tag-pill{
+    display:inline-block;padding:22px 46px;
+    background:var(--gold);color:#0a0a12;
+    font-size:60px;font-weight:900;letter-spacing:-0.5px;
+    border-radius:24px;line-height:1.05;
+    box-shadow:0 0 50px rgba(244,196,48,0.45);
+  }
+
+  /* ====== служебное (record.py прячет автоматически) ====== */
+  .progress{
+    position:fixed;left:8px;top:8px;
+    color:#888;font-size:12px;font-family:monospace;
+    background:rgba(0,0,0,.5);padding:6px 10px;border-radius:4px;
+    z-index:9999;pointer-events:none;
+  }
+  .controls{
+    position:fixed;right:8px;top:8px;z-index:9999;
+    display:flex;gap:6px;
+  }
+  .controls button{
+    background:#222;color:#eee;border:1px solid #444;
+    padding:8px 12px;border-radius:6px;cursor:pointer;font-size:12px;
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress">scene 0/SCENES_COUNT</div>
+<div class="controls">
+  <button onclick="restart()">⟲</button>
+  <button onclick="togglePlay()" id="pp">⏸</button>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- ============== SCENE 1 ============== -->
+  <div class="scene" id="s1">
+    <div class="center">
+      <!-- TODO: контент сцены 1 -->
+    </div>
+  </div>
+
+  <!-- ============== SCENE 2 ============== -->
+  <div class="scene" id="s2">
+    <div class="center">
+      <!-- TODO: контент сцены 2 -->
+    </div>
+  </div>
+
+  <!-- добавляйте сцены ниже по образцу -->
+
+</div>
+
+<script>
+  /* ----------- авто-фит сцены под окно ----------- */
+  function fit(){
+    const stage = document.getElementById('stage');
+    const sw = window.innerWidth, sh = window.innerHeight;
+    const k = Math.min(sw/1080, sh/1920);
+    stage.style.transform = `scale(${k})`;
+    document.body.style.height = (1920*k)+'px';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  /* ----------- утилиты сцен ----------- */
+  const SCENES = 2;   // обновите при изменении числа сцен
+  let sceneIdx = 0;
+  const progress = document.getElementById('progress');
+  function setProgress(i){ progress.textContent = `scene ${i}/${SCENES}`; }
+  function mark(){ sceneIdx++; setProgress(sceneIdx); if(window.qaMark) window.qaMark(sceneIdx); }
+  const QA = new URLSearchParams(location.search).has('qa');
+
+  /* ----------- главный таймлайн ----------- */
+  let master;
+
+  function buildTimeline(){
+    master = anime.timeline({
+      autoplay: !QA,
+      easing: 'easeOutQuad'
+    });
+    window.master = master;
+
+    /* === SCENE 1 === */
+    master.add({targets:'#s1', opacity:[0,1], duration:300, begin:()=>mark()});
+    // TODO: анимации сцены 1
+    master.add({targets:'#s1', opacity:[1,0], duration:400, delay:500});
+
+    /* === SCENE 2 === */
+    master.add({targets:'#s2', opacity:[0,1], duration:300, begin:()=>mark()});
+    // TODO: анимации сцены 2
+    master.add({targets:'#s2', opacity:[1,0], duration:400, delay:500});
+  }
+
+  buildTimeline();
+  window.startAnimation = function(){ if(window.master){ window.master.restart(); } else { buildTimeline(); window.master.play(); } };
+
+  /* ----------- управление ----------- */
+  function restart(){
+    sceneIdx = 0;
+    anime.set('.scene', {opacity:0});
+    /* TODO: добавьте сброс начальных состояний (strokeDashoffset, width, height, opacity) */
+    master.restart();
+  }
+  let playing = true;
+  function togglePlay(){
+    if(playing){ master.pause(); document.getElementById('pp').textContent='▶'; }
+    else      { master.play();  document.getElementById('pp').textContent='⏸'; }
+    playing = !playing;
+  }
+</script>
+</body>
+</html>
