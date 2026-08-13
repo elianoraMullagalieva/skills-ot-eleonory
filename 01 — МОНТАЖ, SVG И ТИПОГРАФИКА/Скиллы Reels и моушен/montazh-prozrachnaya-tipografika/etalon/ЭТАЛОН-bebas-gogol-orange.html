@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Не делай это — субтитр-монтаж v2</title>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<style>
+  @font-face{font-family:'Bebas';src:url('../_fonts/BebasNeueCyrillic.ttf');}
+  @font-face{font-family:'Gogol';src:url('../_fonts/Gogol-Regular.otf');}
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Regular.ttf');font-weight:400;}
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Medium.ttf');font-weight:500;}
+  :root{--red:#e8412c;--white:#fff;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#111;overflow:hidden;}
+  /* превью-подложка: нейтральная тёмная (красный свет убран) */
+  .stage{position:relative;width:1080px;height:1920px;transform-origin:top left;overflow:hidden;background:#1a1817;}
+  .stage::before{content:'';position:absolute;inset:0;background:linear-gradient(160deg,#242020 0%,#1a1817 55%,#141212 100%);}
+  .stage.alpha{background:#0a3d2e;}
+  .stage.alpha::before{display:none;}
+
+  /* ЗОНА ГРАФИКИ — приподнята ~10% выше (ближе к верху, но не впритык) */
+  .zone{position:absolute;top:330px;left:0;width:1080px;height:620px;z-index:5;
+    display:flex;align-items:center;justify-content:center;}
+
+  /* сцена = flex-колонка по центру, строки ВПЛОТНУЮ (без дыр) */
+  .scene{position:absolute;top:0;left:0;width:1080px;height:620px;opacity:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 60px;}
+
+  /* ТИПО-ШКАЛА — 3 роли, фиксированные пропорции */
+  .hero{font-family:'Bebas';font-size:200px;line-height:.9;letter-spacing:2px;color:#fff;text-shadow:0 6px 30px rgba(0,0,0,.5);}
+  .hero.sm{font-size:150px;}
+  .hero.xl{font-size:300px;}
+  .script{font-family:'Gogol';font-size:110px;line-height:1.45;padding:0.12em 0.1em 0.22em;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,.55);overflow:visible;}
+  .script.red{color:var(--red);}
+  .label{font-family:'Manrope';font-weight:500;font-size:44px;letter-spacing:6px;color:rgba(255,255,255,.7);text-transform:uppercase;}
+  .note{font-family:'Manrope';font-weight:400;font-size:48px;line-height:1.4;color:#fff;}
+  .red{color:var(--red);}
+
+  /* чипсы — Manrope Regular, НЕ жирный */
+  .tag{display:inline-block;font-family:'Manrope';font-weight:400;font-size:46px;padding:16px 34px;border-radius:60px;
+    background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.9);color:#fff;margin:10px;white-space:nowrap;
+    backdrop-filter:blur(3px);transition:none;}
+  .row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;max-width:960px;}
+
+  svg{overflow:visible;}
+  .ico{fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+  .ico .acc{stroke:var(--red);}
+
+  .panel{position:fixed;bottom:0;left:0;right:0;background:#0c0c0e;padding:12px 20px;display:flex;gap:12px;align-items:center;z-index:99;border-top:1px solid #26272b;}
+  .panel button{font-family:'Bebas';font-size:22px;letter-spacing:2px;background:#e8412c;color:#fff;border:none;border-radius:10px;padding:9px 22px;cursor:pointer;}
+  .panel button.alt{background:#26272b;}
+  .panel .t{color:#8f9098;font-family:sans-serif;font-size:12px;}
+</style>
+</head>
+<body>
+  <div class="stage" id="stage"><div class="zone" id="zone"></div></div>
+  <div class="panel">
+    <button onclick="start()">▶ ПОВТОР</button>
+    <button class="alt" onclick="stage.classList.toggle('alpha')">фон: видео / прозрачн.</button>
+    <span class="t">v2 · без зумки · центр · строки вплотную · Manrope Regular для вторичного</span>
+  </div>
+
+<script>
+  const stage=document.getElementById('stage'), zone=document.getElementById('zone');
+  function fit(){const s=Math.min(innerWidth/1080,(innerHeight-56)/1920);stage.style.transform='scale('+s+')';}
+  addEventListener('resize',fit);fit();
+  const A=(t,p)=>anime(Object.assign({targets:t,easing:'easeOutExpo'},p));
+  const NS='http://www.w3.org/2000/svg';
+
+  function scene(id,html){const s=document.createElement('section');s.className='scene';s.id=id;s.innerHTML=html;zone.appendChild(s);return s;}
+  function show(id){document.querySelectorAll('.scene').forEach(s=>s.style.opacity=0);const el=document.getElementById(id);el.style.opacity=1;return el;}
+  function draw(sel,dur,delay){document.querySelectorAll(sel).forEach(p=>{const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;anime({targets:p,strokeDashoffset:[L,0],duration:dur||500,delay:delay||0,easing:'easeInOutSine'});});}
+  const IC=(p,s)=>'<svg width="'+(s||110)+'" height="'+(s||110)+'" viewBox="0 0 64 64" class="ico">'+p+'</svg>';
+  const ICON={
+    tg:'<path d="M52 14 L8 32 l14 5 4 14 6 -9 12 9 z"/><path d="M22 37 L44 22" class="acc"/>',
+    chat:'<path d="M12 16 h40 a4 4 0 0 1 4 4 v20 a4 4 0 0 1 -4 4 H26 l-10 10 v-10 h-4 a4 4 0 0 1 -4 -4 V20 a4 4 0 0 1 4 -4z"/><path d="M22 28 h20 M22 36 h12" class="acc"/>',
+    lesson:'<path d="M32 16 C24 12 14 12 10 14 v34 c4 -2 14 -2 22 2 8 -4 18 -4 22 -2 V14 c-4 -2 -14 -2 -22 2z"/><path d="M32 18 v34" class="acc"/>',
+  };
+
+  // ── УТИЛИТЫ ПОЯВЛЕНИЯ (БЕЗ ZOOM — только opacity + мягкий сдвиг) ──
+  function rise(el,delay,dy){A(el,{opacity:[0,1],translateY:[(dy!=null?dy:34),0],duration:480,delay:delay||0,easing:'easeOutQuart'});}
+  function fadeIn(el,delay){A(el,{opacity:[0,1],duration:420,delay:delay||0,easing:'easeOutQuad'});}
+  function write(el,delay,dur){el.style.clipPath='inset(0 100% 0 0)';A(el,{opacity:[0,1],duration:150,delay:delay||0});
+    anime({targets:el,clipPath:['inset(0 100% 0 0)','inset(0 0% 0 0)'],translateY:[6,0],duration:dur||720,delay:delay||0,easing:'easeInOutQuad'});}
+
+  // ================= СЦЕНЫ =================
+  // строки внутри .scene идут вплотную (gap:0, line-height .9) — дыр нет
+
+  // 0 · НЕ / ДЕЛАЙ ЭТО / если хочешь
+  scene('s0','<div class="hero red" style="font-size:300px;opacity:0" id="s0a">НЕ</div>'+
+    '<div class="hero" style="font-size:150px;opacity:0;margin-top:-10px" id="s0b">ДЕЛАЙ ЭТО</div>'+
+    '<div class="script" style="font-size:120px;opacity:0;margin-top:18px" id="s0c">если хочешь</div>');
+
+  // 1 · БОГАТЫХ КЛИЕНТОВ / на сайты
+  scene('s1','<div class="hero" style="opacity:0" id="s1a">БОГАТЫХ</div>'+
+    '<div class="hero" style="opacity:0;margin-top:-14px" id="s1b">КЛИЕНТОВ</div>'+
+    '<div class="script" style="opacity:0;margin-top:16px" id="s1c">на сайты</div>');
+
+  // 2 · ОШИБКА 1
+  scene('s2','<div class="label" style="opacity:0" id="s2l">Ошибка</div>'+
+    '<div class="hero xl red" style="opacity:0;margin-top:-20px" id="s2n">1</div>');
+
+  // 3 · ПОРТФОЛИО В… + чипсы (Manrope Regular)
+  scene('s3','<div class="hero sm" style="opacity:0;margin-bottom:36px" id="s3t">ПОРТФОЛИО В…</div>'+
+    '<div class="row" id="s3chips"></div>');
+
+  // 4 · 3,5 подписчика (счётчик + рукопись крупнее)
+  scene('s4','<div id="s4ic" style="opacity:0;margin-bottom:10px"></div>'+
+    '<div class="hero xl" style="opacity:0" id="s4n">0,0</div>'+
+    '<div class="script red" style="opacity:0;margin-top:6px" id="s4s">подписчика</div>');
+
+  // 5 · КРАСИВО (зачёрк) → 0 КЛИЕНТОВ
+  scene('s5','<div style="position:relative;opacity:0" id="s5a"><div class="hero">КРАСИВО</div>'+
+    '<svg width="620" height="40" viewBox="0 0 620 40" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"><line class="s5z" x1="20" y1="22" x2="600" y2="16" stroke="#e8412c" stroke-width="14" stroke-linecap="round"/></svg></div>'+
+    '<div class="hero red" style="opacity:0;margin-top:14px" id="s5b">0 КЛИЕНТОВ</div>');
+
+  // 6 · ПУБЛИКУЙСЯ + платформы (загораются красным по очереди)
+  scene('s6','<div class="hero sm" style="opacity:0;margin-bottom:34px" id="s6t">ПУБЛИКУЙСЯ</div>'+
+    '<div class="row" id="s6chips"></div>');
+
+  // 7 · ВЕЗДЕ и сразу (вплотную)
+  scene('s7','<div class="hero" style="opacity:0" id="s7a">ВЕЗДЕ</div>'+
+    '<div class="script" style="opacity:0;margin-top:10px" id="s7b">и сразу</div>');
+
+  // 8 · ОШИБКА 2 → В ПЕРЕПИСКЕ
+  scene('s8','<div class="label" style="opacity:0" id="s8l">Ошибка 2</div>'+
+    '<div id="s8ic" style="opacity:0;margin:18px 0"></div>'+
+    '<div class="hero sm" style="opacity:0" id="s8t">В ПЕРЕПИСКЕ</div>');
+
+  // 9 · даже состоятельному → ДОРОГО → если сразу назвать цену
+  scene('s9','<div class="label" style="opacity:0;margin-bottom:22px" id="s9l">даже состоятельному</div>'+
+    '<div class="hero" style="opacity:0" id="s9a">ДОРОГО</div>'+
+    '<div class="script" style="opacity:0;font-size:80px;margin-top:14px" id="s9b">если сразу назвать цену</div>');
+
+  // 10 · МЕТОДИКА (крупно) + шаги — ВСЁ ПО ЛЕВОМУ КРАЮ единым блоком
+  scene('s10','<div style="width:760px;text-align:left">'+
+    '<div class="hero sm" style="opacity:0;margin-bottom:40px;text-align:left" id="s10t">МЕТОДИКА</div>'+
+    '<div id="s10steps"></div></div>');
+
+  // 11 · когда клиент → да, нравится → ЦЕНА
+  scene('s11','<div class="label" style="opacity:0;margin-bottom:20px" id="s11l">когда клиент говорит</div>'+
+    '<div class="script" style="opacity:0" id="s11a">да, нравится</div>'+
+    '<div class="hero sm" style="opacity:0;margin-top:18px" id="s11b">→ ЦЕНА</div>');
+
+  // 12 · как нахожу/продвигаюсь/продаю → всё в ОДИН УРОК
+  scene('s12','<div id="s12list" style="opacity:1;text-align:left;width:720px"></div>'+
+    '<div id="s12final" style="opacity:0;display:flex;flex-direction:column;align-items:center;position:absolute;width:1080px">'+
+    '<div class="label" style="margin-bottom:16px">всё в одном</div>'+
+    '<div class="hero xl red">УРОК</div></div>');
+
+  // 13 · ЗАБИРАЙ / в описании / ↓ (стрелка маленькая, ПОСЛЕ слова)
+  scene('s13','<div class="hero" style="opacity:0" id="s13t">ЗАБИРАЙ</div>'+
+    '<div class="script" style="opacity:0;font-size:96px;margin-top:8px" id="s13s">в описании</div>'+
+    '<svg width="80" height="110" viewBox="0 0 80 110" style="margin-top:14px;opacity:0" id="s13arr"><path class="s13a" d="M40 12 L40 78 M18 58 L40 84 L62 58" fill="none" stroke="#e8412c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+
+  // ================= МОНТАЖ =================
+  const CUES=[
+    [0.0, en_s0],[2.8, en_s1],[4.9, en_s2],[5.8, en_s3],[9.7, en_s4],
+    [11.4,en_s5],[16.5,en_s6],[22.6,en_s7],[24.4,en_s8],[27.6,en_s9],
+    [33.5,en_s10],[40.5,en_s11],[47.4,en_s12],[54.1,en_s13],
+  ];
+
+  function en_s0(){show('s0');
+    // «не» 0.7 · «делайте это» 0.9-1.4 · «если хотите» 2.1 → рукопись на ~1.9с
+    rise(document.getElementById('s0a'),0,50);
+    rise(document.getElementById('s0b'),650,40);
+    write(document.getElementById('s0c'),1900,720);}
+
+  function en_s1(){show('s1');
+    // сцена 2.8: богатых 2.9(0) · клиентов 3.5(+700) · на сайтах 4.1(+1300)
+    rise(document.getElementById('s1a'),0);rise(document.getElementById('s1b'),650);
+    write(document.getElementById('s1c'),1300,650);}
+
+  function en_s2(){show('s2');fadeIn(document.getElementById('s2l'),0);rise(document.getElementById('s2n'),200,50);}
+
+  function en_s3(){show('s3');rise(document.getElementById('s3t'),0);
+    // сцена стартует 5.8; речь: картинки 6.9, PDF 7.7, Telegram 8.8 → delay 1100/1900/3000
+    const box=document.getElementById('s3chips');box.innerHTML='';
+    const words=[['картинки',1100],['PDF',1900],['Telegram',3000]];
+    words.forEach(([t])=>{const c=document.createElement('span');c.className='tag';c.textContent=t;c.style.opacity=0;box.appendChild(c);});
+    const chips=[...document.querySelectorAll('#s3chips .tag')];
+    chips.forEach((c,i)=>{A(c,{opacity:[0,1],translateY:[24,0],delay:words[i][1],duration:420,easing:'easeOutQuart'});});}
+
+  function en_s4(){show('s4');document.getElementById('s4ic').innerHTML=IC(ICON.tg,120);fadeIn(document.getElementById('s4ic'),0);
+    const el=document.getElementById('s4n');fadeIn(el,150);const o={v:0};
+    anime({targets:o,v:3.5,duration:1200,delay:200,round:10,easing:'easeOutCubic',update:()=>{el.textContent=o.v.toFixed(1).replace('.',',');}});
+    write(document.getElementById('s4s'),650,700);}
+
+  function en_s5(){show('s5');
+    // сцена 11.4: красиво 12.7(+1300) · зачёрк на «но» 13.4 · клиентов 15.5(+4100)
+    rise(document.getElementById('s5a'),1000);
+    draw('#s5 .s5z',420,2000);
+    rise(document.getElementById('s5b'),3600,40);}
+
+  function en_s6(){show('s6');rise(document.getElementById('s6t'),0);
+    const box=document.getElementById('s6chips');box.innerHTML='';
+    // ПОРЯДОК КАК В РЕЧИ: Behance, Deep Profile, Pinterest, Awwwards
+    // сцена стартует 16.5. речь: Behance 18.2, Deep 19.1, Pinterest 19.9, Awwwards 20.8
+    // → загорание (delay от старта): 1700, 2600, 3400, 4300
+    const names=['Behance','Deep Profile','Pinterest','Awwwards'];
+    const lights=[1700,2600,3400,4300];
+    names.forEach(t=>{const c=document.createElement('span');c.className='tag';c.textContent=t;c.style.opacity=0;box.appendChild(c);});
+    const chips=[...document.querySelectorAll('#s6chips .tag')];
+    // все чипсы появляются заранее (белыми), пока «публикуйтесь» 17.0 → delay ~700
+    A('#s6chips .tag',{opacity:[0,1],translateY:[22,0],delay:anime.stagger(120,{start:700}),duration:400,easing:'easeOutQuart'});
+    // загораются красным ровно когда называешь — быстро (200мс)
+    chips.forEach((c,i)=>{setTimeout(()=>{anime({targets:c,backgroundColor:'#e8412c',borderColor:'#e8412c',color:'#fff',duration:200,easing:'easeOutQuad'});
+      A(c,{scale:[1,1.08,1],duration:260,easing:'easeOutQuad'});},lights[i]);});}
+
+  function en_s7(){show('s7');
+    // сцена 22.6: везде 23.2(+600) · и сразу 23.9(+1300) — write быстрый (450мс), успевает дописаться+постоять
+    rise(document.getElementById('s7a'),600);write(document.getElementById('s7b'),1300,450);}
+
+  function en_s8(){show('s8');
+    // сцена 24.4: второе(0) · в переписке 25.6(+900) — раньше, чтобы дольше стояло до s9(26.1... сдвинут)
+    fadeIn(document.getElementById('s8l'),0);
+    document.getElementById('s8ic').innerHTML=IC(ICON.chat,120);fadeIn(document.getElementById('s8ic'),400);
+    rise(document.getElementById('s8t'),900);}
+
+  function en_s9(){show('s9');
+    // сцена 27.6: «даже состоятельному»(0, реч. 26.1-27.9) · дорого 28.8(+1200) · «если сразу назвать цену» 30.3(+2700) write медленно
+    fadeIn(document.getElementById('s9l'),0);
+    rise(document.getElementById('s9a'),1200);
+    write(document.getElementById('s9b'),2700,1900);}
+
+  function en_s10(){show('s10');
+    // сцена 33.5: методика 34.9(+1400) · готовлюсь 36.2(+2700) · собираю 37.7(+4200) · презентую 39.6(+6100)
+    rise(document.getElementById('s10t'),1400);
+    const box=document.getElementById('s10steps');box.innerHTML='';
+    const steps=[['1','готовлюсь к созвону',2700],['2','собираю идеи',4200],['3','презентую',6100]];
+    steps.forEach(([n,t])=>{const r=document.createElement('div');r.className='s10r';r.style.cssText='display:flex;align-items:baseline;gap:24px;margin:22px 0;opacity:0';
+      r.innerHTML='<span style="font-family:Bebas;font-size:72px;color:#e8412c;line-height:1">'+n+'</span><span style="font-family:Manrope;font-weight:400;font-size:52px;color:#fff">'+t+'</span>';box.appendChild(r);});
+    const rows=[...document.querySelectorAll('#s10steps .s10r')];
+    rows.forEach((r,i)=>{A(r,{opacity:[0,1],translateX:[-30,0],delay:steps[i][2],duration:400,easing:'easeOutQuart'});});}
+
+  function en_s11(){show('s11');
+    // сцена 40.5: «когда клиент говорит»(0, реч.41.8) · «да, нравится» 42.5(+2000) · цену 44.7(+4200)
+    fadeIn(document.getElementById('s11l'),0);
+    write(document.getElementById('s11a'),2000,700);
+    rise(document.getElementById('s11b'),4200);}
+
+  function en_s12(){show('s12');
+    // сцена 47.4: нахожу 50.0(+2600) · продвигаюсь 51.2(+3800) · продаю 52.4(+5000) · УРОК 53.4(+6000)
+    const box=document.getElementById('s12list');box.innerHTML='';
+    const items=[['нахожу','клиентов',2600],['и','продвигаюсь',3800],['и','продаю',5000]];
+    items.forEach(([a,b])=>{const r=document.createElement('div');r.className='s12r';r.style.cssText='display:flex;align-items:baseline;gap:18px;margin:20px 0;opacity:0;font-family:Manrope;font-weight:400;font-size:56px;color:#fff';
+      r.innerHTML='<span style="color:rgba(255,255,255,.5)">'+a+'</span><span style="font-weight:800">'+b+'</span>';box.appendChild(r);});
+    const rows=[...document.querySelectorAll('#s12list .s12r')];
+    rows.forEach((r,i)=>{A(r,{opacity:[0,1],translateX:[-26,0],delay:items[i][2],duration:400,easing:'easeOutQuart'});});
+    // схлопывание списка → УРОК
+    setTimeout(()=>{A('#s12list',{opacity:[1,0],duration:300});
+      A('#s12final',{opacity:[0,1],duration:100});
+      A('#s12final .hero',{scale:[.85,1],opacity:[0,1],translateY:[30,0],duration:500,easing:'easeOutBack'});
+      A('#s12final .label',{opacity:[0,1],duration:300});},5900);}
+
+  function en_s13(){show('s13');
+    // сцена 54.1: «вот этот» → забрать 55.1(+1000) · в описании 56.2(+2100)
+    rise(document.getElementById('s13t'),1000);
+    write(document.getElementById('s13s'),2100,650);
+    fadeIn(document.getElementById('s13arr'),2900);draw('#s13arr .s13a',450,2950);
+    A('#s13arr',{translateY:[0,12,0],duration:900,delay:3400,loop:true,easing:'easeInOutSine'});}
+
+  // ПЛЕЕР
+  let startT=null, fired=[];
+  function loop(ts){if(startT===null)startT=ts;const t=(ts-startT)/1000;
+    CUES.forEach((c,i)=>{if(!fired[i]&&t>=c[0]){fired[i]=true;c[1]();}});
+    if(t<57)requestAnimationFrame(loop);}
+  function start(){document.querySelectorAll('.scene').forEach(s=>s.style.opacity=0);startT=null;fired=[];requestAnimationFrame(loop);}
+  window.startAnimation=start;
+  const qa=new URLSearchParams(location.search).get('qa');
+  if(qa!=='1')start();
+</script>
+</body>
+</html>
