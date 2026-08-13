@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__pencil"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "claude-sonnet-4-6",
+  "statusLine": {
+    "type": "command",
+    "command": "sh /Users/elianora/.claude/statusline-command.sh"
+  },
+  "language": "russian",
+  "alwaysThinkingEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "light-daltonized",
+  "enabledPlugins": {
+    "figma@claude-plugins-official": true
+  }
+}

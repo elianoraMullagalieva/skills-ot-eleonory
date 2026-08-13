@@ -9,7 +9,7 @@ Lightweight JavaScript animation library with powerful timeline and stagger capa
 
 ## ⚠ ОБЯЗАТЕЛЬНЫЙ ФОРМАТ для Reels-анимаций Ули
 
-Любая HTML-анимация для Reels должна соответствовать формату ниже. Это обеспечивает совместимость с автоматической QA-проверкой (если она установлена) и записью в mp4 через `record.py`.
+Любая HTML-анимация для Reels (папки `~/Documents/Work/Clients/*/animations/*`, `~/Documents/Personal/*/animations/*`, `~/Documents/Reels-*/...`) ДОЛЖНА соответствовать формату ниже. Это обеспечивает совместимость с автоматической QA-проверкой (скил `animation-qa`) и записью в mp4 (`record.py`).
 
 ### Что обязано быть
 
@@ -42,7 +42,7 @@ Lightweight JavaScript animation library with powerful timeline and stagger capa
 Лежит в `~/.claude/skills/animejs/record.py`. Можно вызывать из любой папки:
 
 ```bash
-cd /путь/к/проекту/анимации
+cd ~/Documents/Work/Clients/Olga-nalogi/animations/musk-taxes
 python3 ~/.claude/skills/animejs/record.py --duration 55
 # → _out/index.mp4
 ```

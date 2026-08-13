@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Нейрокреатор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   ОБЩИЕ ПЕРЕМЕННЫЕ И БАЗА
+   ========================================================= */
+:root{
+  --c-bg:#101214;
+  --c-fg:#ffffff;
+  --c-mute:#a399a8;
+  --c-dim:#544d56;
+  --c-accent:#f4ff1e;
+  --c-line:rgba(255,255,255,.1);
+  --font:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --margin:1.4rem;
+  --ease:cubic-bezier(.5,0,.3,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--c-bg);color:var(--c-fg);font-family:var(--font);font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.005em}
+body{min-height:100vh;overflow-x:hidden;cursor:none}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:none;padding:0}
+
+
+/* =========================================================
+   [1] ФОН СЦЕНЫ — цвет, мягкое свечение, шум
+   --------------------------------------------------------
+   Меняй здесь: цвет фона (--c-bg), интенсивность свечения,
+   плотность шума (opacity у .grain).
+   ========================================================= */
+.bg-glow{
+  position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(ellipse 50% 45% at 50% 55%, rgba(244,255,30,.035), rgba(16,18,20,0) 60%),
+    radial-gradient(ellipse 80% 60% at 50% 60%, rgba(163,153,168,.05), rgba(16,18,20,0) 70%);
+}
+.bg-grain{
+  position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.07;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+
+/* =========================================================
+   [2] HERO — каркас, шапка, заголовок, нижний пояс,
+       центральный 3D-объект (canvas)
+   --------------------------------------------------------
+   Меняй здесь:
+   - тексты в .logo, .cta, .title, .offer, .version
+   - размер заголовка (--title-size)
+   - воздух между заголовком и низом (padding-bottom у .hero)
+   ========================================================= */
+.hero{
+  position:relative;
+  min-height:100vh;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  padding:var(--margin);
+  z-index:3;
+}
+
+/* шапка */
+.hero-top{
+  display:flex;justify-content:space-between;align-items:center;gap:1rem;
+  font-family:var(--font-mono);font-size:.78rem;letter-spacing:.02em;color:var(--c-mute);
+}
+.logo{display:flex;align-items:center;gap:.55rem;color:var(--c-fg)}
+.logo-dot{width:.45rem;height:.45rem;border-radius:50%;background:var(--c-accent);box-shadow:0 0 12px rgba(244,255,30,.6)}
+.cta{
+  display:inline-flex;align-items:center;gap:.55rem;color:var(--c-fg);
+  border:1px solid var(--c-line);border-radius:999px;padding:.55rem 1rem;
+  transition:border-color .35s var(--ease),background-color .35s var(--ease);
+}
+.cta:hover{border-color:rgba(244,255,30,.5);background:rgba(244,255,30,.05)}
+.cta::after{content:"";width:.38rem;height:.38rem;border-right:1px solid currentColor;border-top:1px solid currentColor;transform:rotate(45deg);margin-left:.15rem}
+
+/* 3D-сцена — фон между шапкой и заголовком */
+.stage{
+  position:absolute;
+  top:0;left:0;right:0;
+  height:100vh;
+  z-index:3;
+  pointer-events:none;
+}
+#scene-canvas{width:100%;height:100%;display:block}
+
+/* центральная пустая область — здесь живёт canvas */
+.hero-mid{position:relative;z-index:4}
+
+/* заголовок — снизу, в две строки, прижат к низу как у референса */
+.hero-title{
+  position:relative;z-index:4;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;pointer-events:none;
+  --title-size:clamp(3.5rem, 14vw, 14rem);
+}
+.title{
+  font-family:var(--font);font-weight:500;line-height:.88;letter-spacing:-.045em;
+  font-size:var(--title-size);margin:0;
+}
+.title .line{display:block}
+.title .line-2{margin-top:-.05em}
+
+/* нижний пояс: оффер слева, тег версии справа, листай по центру */
+.hero-bottom{
+  position:relative;z-index:4;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:2rem;
+  margin-top:1.6rem;
+  font-family:var(--font-mono);font-size:.78rem;color:var(--c-mute);letter-spacing:.02em;
+}
+.offer{justify-self:start;max-width:42ch;line-height:1.45;color:var(--c-mute);margin:0}
+.offer .bar{display:inline-block;width:.2rem;height:.8rem;background:var(--c-accent);vertical-align:-1px;margin-right:.55rem}
+.offer strong{color:var(--c-fg);font-weight:500}
+.scroll-hint{justify-self:center;display:flex;align-items:center;gap:.5rem;color:var(--c-dim)}
+.scroll-hint .dash{width:1.4rem;height:1px;background:currentColor;display:inline-block}
+.version{justify-self:end;color:var(--c-mute)}
+.version .sep{color:var(--c-dim);margin:0 .35rem}
+
+@media (max-width:780px){
+  :root{--margin:1rem}
+  .hero-title{--title-size:clamp(3rem,16vw,6rem)}
+  .hero-bottom{grid-template-columns:1fr;gap:1rem}
+  .offer,.scroll-hint,.version{justify-self:start}
+  body{cursor:auto}
+}
+
+
+/* =========================================================
+   [3] КУРСОР — кольцо + точка, как у референса
+   --------------------------------------------------------
+   Меняй здесь: размер курсора, цвет, скорость следования
+   ========================================================= */
+.cursor{
+  position:fixed;top:0;left:0;width:32px;height:32px;
+  border:1px solid rgba(255,255,255,.5);border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:none;z-index:50;
+  transition:width .35s var(--ease),height .35s var(--ease),background-color .35s var(--ease),border-color .35s var(--ease);
+  mix-blend-mode:difference;
+}
+.cursor-dot{
+  position:fixed;top:0;left:0;width:4px;height:4px;
+  background:var(--c-fg);border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:none;z-index:51;
+  mix-blend-mode:difference;
+}
+.cursor.is-hover{width:54px;height:54px;background:rgba(244,255,30,.12);border-color:rgba(244,255,30,.6)}
+@media (max-width:780px){.cursor,.cursor-dot{display:none}}
+
+
+/* появление */
+.reveal{opacity:0;transform:translateY(12px);transition:opacity 1.1s var(--ease),transform 1.1s var(--ease)}
+.reveal.is-in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.05s}
+.reveal.d2{transition-delay:.18s}
+.reveal.d3{transition-delay:.32s}
+.reveal.d4{transition-delay:.5s}
+.reveal.d5{transition-delay:.7s}
+</style>
+</head>
+<body>
+
+
+<!-- =========================================================
+     [1] ФОН СЦЕНЫ
+     ========================================================= -->
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-grain" aria-hidden="true"></div>
+
+
+<!-- =========================================================
+     [2] HERO
+     ========================================================= -->
+<section class="hero">
+
+  <header class="hero-top">
+    <a class="logo reveal d1" href="#">
+      <span class="logo-dot"></span>
+      <span>Нейрокреатор</span>
+    </a>
+    <button class="cta reveal d2" type="button">Записаться</button>
+  </header>
+
+  <!-- центральная зона, в неё ляжет canvas (.stage абсолютно поверх) -->
+  <div class="hero-mid"></div>
+
+  <!-- 3D-сцена занимает всю высоту hero -->
+  <div class="stage" aria-hidden="true">
+    <canvas id="scene-canvas"></canvas>
+  </div>
+
+  <div class="hero-title">
+    <h1 class="title">
+      <span class="line reveal d3">Стань</span>
+      <span class="line line-2 reveal d4">нейро&shy;креатором</span>
+    </h1>
+  </div>
+
+  <div class="hero-bottom">
+    <p class="offer reveal d5">
+      <span class="bar"></span>
+      Освой&nbsp;Claude Code и&nbsp;все модели нейросетей за&nbsp;<strong>6&nbsp;недель</strong>. Упакуй себя как&nbsp;специалиста и&nbsp;продавай на&nbsp;чеки от&nbsp;<strong>$2&nbsp;000</strong>
+    </p>
+    <div class="scroll-hint reveal d5"><span class="dash"></span><span>Листай</span></div>
+    <div class="version reveal d5">v&nbsp;1.0.0<span class="sep">·</span>Онлайн-курс<span class="sep">·</span>6&nbsp;недель</div>
+  </div>
+
+</section>
+
+
+<!-- =========================================================
+     [3] КУРСОР
+     ========================================================= -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursor-dot"></div>
+
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* =========================================================
+   КУРСОР — плавное следование
+   ========================================================= */
+const cursor = document.getElementById('cursor');
+const dot    = document.getElementById('cursor-dot');
+let mx = innerWidth/2, my = innerHeight/2;
+let cx = mx, cy = my, dx = mx, dy = my;
+
+addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
+document.querySelectorAll('a,button,.cta').forEach(el => {
+  el.addEventListener('pointerenter', () => cursor.classList.add('is-hover'));
+  el.addEventListener('pointerleave', () => cursor.classList.remove('is-hover'));
+});
+
+
+/* =========================================================
+   3D-СЦЕНА — узкий клинок, парит и реагирует на курсор.
+   ---------------------------------------------------------
+   Заменить объект: пересобери группу `blade` ниже —
+   геометрия, материалы и пропорции тут все.
+   ========================================================= */
+const canvas   = document.getElementById('scene-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0, 9);
+
+/* свет */
+scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+const key  = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set( 3, 4, 5); scene.add(key);
+const rim  = new THREE.DirectionalLight(0xf4ff1e, 0.5); rim.position.set(-4,-2,-3); scene.add(rim);
+const fill = new THREE.PointLight(0xa399a8, 0.7, 18);   fill.position.set(-3, 2, 4); scene.add(fill);
+
+/* группа объекта */
+const blade = new THREE.Group();
+
+/* материалы */
+const steelMat = new THREE.MeshPhysicalMaterial({
+  color:0xc8ccd2, metalness:0.95, roughness:0.18, clearcoat:0.6, clearcoatRoughness:0.2
+});
+const darkMat = new THREE.MeshPhysicalMaterial({
+  color:0x1a1c1f, metalness:0.6, roughness:0.45
+});
+const accentMat = new THREE.MeshPhysicalMaterial({
+  color:0xf4ff1e, metalness:0.3, roughness:0.4, emissive:0xf4ff1e, emissiveIntensity:0.18
+});
+const gripMat = new THREE.MeshPhysicalMaterial({
+  color:0x2a2c30, metalness:0.4, roughness:0.7
+});
+
+/* пропорции — узкий длинный клинок, ~70% высоты экрана */
+const BLADE_LEN = 4.8;
+const BLADE_W   = 0.06;
+const BLADE_THK = 0.02;
+const GUARD_W   = 0.55;
+const GRIP_LEN  = 1.0;
+
+/* клинок — тонкая удлинённая призма */
+const bladeGeo = new THREE.BoxGeometry(BLADE_W, BLADE_LEN, BLADE_THK);
+const bladeMesh = new THREE.Mesh(bladeGeo, steelMat);
+bladeMesh.position.y = BLADE_LEN/2;
+blade.add(bladeMesh);
+
+/* остриё — узкая пирамида сверху */
+const tipGeo = new THREE.ConeGeometry(BLADE_W*0.8, BLADE_LEN*0.12, 4);
+const tipMesh = new THREE.Mesh(tipGeo, steelMat);
+tipMesh.position.y = BLADE_LEN + BLADE_LEN*0.06;
+tipMesh.rotation.y = Math.PI/4;
+blade.add(tipMesh);
+
+/* гарда — горизонтальная перекладина */
+const guardGeo = new THREE.BoxGeometry(GUARD_W, 0.06, 0.12);
+const guardMesh = new THREE.Mesh(guardGeo, darkMat);
+guardMesh.position.y = 0;
+blade.add(guardMesh);
+
+/* акцентная вставка в гарде */
+const accentGeo = new THREE.BoxGeometry(GUARD_W*0.6, 0.015, 0.13);
+const accentMesh = new THREE.Mesh(accentGeo, accentMat);
+accentMesh.position.y = 0;
+blade.add(accentMesh);
+
+/* рукоять — обёрнутая, тёмная */
+const gripGeo = new THREE.CylinderGeometry(0.07, 0.065, GRIP_LEN, 24);
+const gripMesh = new THREE.Mesh(gripGeo, gripMat);
+gripMesh.position.y = -GRIP_LEN/2 - 0.04;
+blade.add(gripMesh);
+
+/* навершие — маленькая капля внизу */
+const pommelGeo = new THREE.SphereGeometry(0.085, 24, 24);
+const pommelMesh = new THREE.Mesh(pommelGeo, darkMat);
+pommelMesh.position.y = -GRIP_LEN - 0.08;
+blade.add(pommelMesh);
+
+/* центрируем объект по вертикали — середина между остриём и навершием */
+const TOTAL_H = BLADE_LEN + BLADE_LEN*0.12 + GRIP_LEN + 0.08;
+blade.position.y = -(BLADE_LEN/2) + (TOTAL_H/2 - BLADE_LEN/2) - 0.5;
+blade.position.y = -0.6;
+
+/* лёгкий наклон, как у меча на референсе */
+blade.rotation.z = Math.PI * 0.05;
+blade.rotation.x = -Math.PI * 0.03;
+scene.add(blade);
+
+/* пыль/частицы вокруг */
+const dustGeo = new THREE.BufferGeometry();
+const N = 180;
+const pos = new Float32Array(N*3);
+for(let i=0;i<N;i++){
+  const r = 2.8 + Math.random()*3;
+  const a = Math.random()*Math.PI*2;
+  pos[i*3]   = Math.cos(a)*r;
+  pos[i*3+1] = (Math.random()-0.5)*4;
+  pos[i*3+2] = Math.sin(a)*r - 2;
+}
+dustGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+  color:0xffffff, size:0.012, transparent:true, opacity:0.45, depthWrite:false
+}));
+scene.add(dust);
+
+
+/* ресайз */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  /* дистанция камеры — чтобы клинок всегда был узким и занимал ~70% высоты */
+  camera.position.z = h < 720 ? 11 : h < 1000 ? 9.5 : 9;
+  camera.updateProjectionMatrix();
+}
+resize();
+addEventListener('resize', resize);
+
+
+/* анимация */
+const clock = new THREE.Clock();
+let tilt = { x:0, y:0 };
+
+function tick(){
+  const t = clock.getElapsedTime();
+
+  cx += (mx - cx) * 0.18;
+  cy += (my - cy) * 0.18;
+  dx += (mx - dx) * 0.32;
+  dy += (my - dy) * 0.32;
+  cursor.style.transform     = `translate(${cx}px,${cy}px) translate(-50%,-50%)`;
+  dot.style.transform        = `translate(${dx}px,${dy}px) translate(-50%,-50%)`;
+
+  const nx = (mx / innerWidth  - 0.5) * 2;
+  const ny = (my / innerHeight - 0.5) * 2;
+  tilt.x += (ny * 0.22 - tilt.x) * 0.05;
+  tilt.y += (nx * 0.35 - tilt.y) * 0.05;
+
+  blade.rotation.z = Math.PI * 0.05 + tilt.y;
+  blade.rotation.x = -Math.PI * 0.03 + tilt.x;
+  blade.rotation.y = Math.sin(t * 0.35) * 0.2;
+  blade.position.y = -0.6 + Math.sin(t * 0.8) * 0.1;
+
+  dust.rotation.y = t * 0.04;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+
+/* появление */
+requestAnimationFrame(() => {
+  document.querySelectorAll('.reveal').forEach(el => el.classList.add('is-in'));
+});
+
+
+/* скролл-хук — задел под раскрытие объекта на весь экран */
+addEventListener('scroll', () => {
+  const p = Math.min(scrollY / innerHeight, 1);
+  camera.position.z = 9 - p * 2.5;
+  blade.rotation.z  = Math.PI * 0.05 + tilt.y + p * 0.25;
+}, { passive:true });
+</script>
+
+</body>
+</html>
