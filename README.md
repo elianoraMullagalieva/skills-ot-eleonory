@@ -6,12 +6,23 @@
 
 1. Открой раздел под свою задачу ниже.
 2. Выбери **конкретную папку скилла** — в ней всегда есть `SKILL.md` и нужные дополнительные файлы.
-3. Скачай репозиторий через **Code → Download ZIP** или клонируй его.
+3. Для обычных скиллов скачай репозиторий через **Code → Download ZIP**. Для полного раздела монтажа с эталонными видео используй Git LFS — инструкция ниже.
 4. Перетащи папку скилла в Claude Code и напиши: «Установи этот скилл и используй его в работе».
 
 ```bash
 git clone https://github.com/elianoraMullagalieva/skills-ot-eleonory.git
 ```
+
+### Полная загрузка раздела монтажа с видео
+
+```bash
+git lfs install
+git clone https://github.com/elianoraMullagalieva/skills-ot-eleonory.git
+cd skills-ot-eleonory
+git lfs pull
+```
+
+Git LFS нужен только для больших видеофайлов из `01 — Монтаж, SVG и типографика`; они сохранены в исходном качестве.
 
 ## Карта библиотеки
 
