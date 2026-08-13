@@ -2,8 +2,10 @@
 
 ## Файлы
 
-- HTML, видео и пословные таймкоды хранятся в папке конкретного проекта.
-- При подготовке нового ролика сначала создай свою копию исходных файлов, затем укажи к ней относительные пути в проекте.
+- HTML: `/Users/elianora/Desktop/Контент/08022к-experimental-typography/index.html`
+- Видео: `/Users/elianora/Desktop/Контент/08022к-experimental-typography/video.mp4`
+- Пословные таймкоды: `/Users/elianora/Desktop/Контент/08022к-experimental-typography-word-timestamps.json`
+- Figma: `https://www.figma.com/design/0AAR1u2bwo6vHOeCAlbRUc/Untitled?node-id=0-1`
 
 ## Утверждённые композиционные примеры
 

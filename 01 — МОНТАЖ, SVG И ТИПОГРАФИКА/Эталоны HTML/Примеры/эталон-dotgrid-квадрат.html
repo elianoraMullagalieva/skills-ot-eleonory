@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Дизайн Кэмп — Figma-правки · dot-grid premium</title>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<style>
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Light.ttf');font-weight:300;}
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-Bold.ttf');font-weight:700;}
+  @font-face{font-family:'Manrope';src:url('../_fonts/Manrope-ExtraBold.ttf');font-weight:800;}
+  @font-face{font-family:'JB';src:url('../_fonts/JetBrainsMono-Regular.ttf');font-weight:400;}
+  @font-face{font-family:'JB';src:url('../_fonts/JetBrainsMono-Bold.ttf');font-weight:700;}
+  :root{
+    --hero:118px; --mid:58px; --cap:34px;
+    --bg:#0b0b0d; --bg2:#101014; --ink:#f4f5f2; --mut:#6f7168; --line:#26272b;
+    --lime:#c6f33a; --dim:#3a3d33;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000;overflow:hidden;font-family:'Manrope',sans-serif;}
+  .stage{position:relative;width:1080px;height:1080px;margin:0 auto;overflow:hidden;
+    transform-origin:top center;background:radial-gradient(120% 120% at 50% 20%,#141418 0%,#0b0b0d 60%,#08080a 100%);}
+  .stage.light{background:radial-gradient(120% 120% at 50% 15%,#fbfbf9 0%,#f2f2ee 100%);}
+
+  /* фоновая точечная сетка — живёт всегда */
+  #dotgrid{position:absolute;inset:0;z-index:0;opacity:.5;}
+  .stage.light #dotgrid{opacity:.6;}
+
+  .mono{font-family:'JB',monospace;font-size:20px;letter-spacing:2px;color:var(--mut);position:absolute;opacity:0;z-index:9;text-transform:uppercase;}
+  .mono.tl{top:54px;left:60px;} .mono.tr{top:54px;right:60px;}
+  .stage.light .mono{color:#a3a49c;}
+
+  .zone-art{position:absolute;top:230px;left:0;width:1080px;height:470px;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .zone-cap{position:absolute;top:780px;left:0;width:1080px;text-align:center;padding:0 70px;z-index:3;}
+
+  .cap{font-weight:800;font-size:var(--mid);color:var(--ink);letter-spacing:-1.5px;line-height:1.02;opacity:0;}
+  .stage.light .cap{color:#0c0c0e;}
+  .cap .lime{color:var(--lime);}
+  .stage.light .cap .lime{color:#8fb01e;}
+  .sub{font-weight:300;font-size:var(--cap);color:var(--mut);opacity:0;margin-top:14px;letter-spacing:.3px;}
+
+  .scene{position:absolute;inset:0;opacity:0;}
+  svg{overflow:visible;}
+  .star{fill:var(--lime);}
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <canvas id="dotgrid" width="1080" height="1080"></canvas>
+    <div class="mono tl" id="mtl">design camp</div>
+    <div class="mono tr" id="mtr">figma × claude</div>
+    <div id="root"></div>
+  </div>
+<script>
+  const stage=document.getElementById('stage'), root=document.getElementById('root');
+  function fit(){stage.style.transform='scale('+Math.min(innerWidth/1080,innerHeight/1080)+')';}
+  addEventListener('resize',fit);fit();
+  const light=()=>stage.classList.add('light'), dark=()=>stage.classList.remove('light');
+  const A=(t,p)=>anime(Object.assign({targets:t,easing:'easeOutExpo'},p));
+  const NS='http://www.w3.org/2000/svg';
+  const LIME='#c6f33a', INK='#f4f5f2', MUT='#6f7168';
+
+  // ===== ФОНОВАЯ ТОЧЕЧНАЯ СЕТКА (canvas, лёгкое дыхание) =====
+  const cv=document.getElementById('dotgrid'), cx=cv.getContext('2d');
+  const GS=46, dots=[];
+  for(let y=GS;y<1080;y+=GS)for(let x=GS;x<1080;x+=GS)dots.push({x,y,ph:Math.sin(x*0.7+y*0.3)});
+  let gt=0;
+  function drawGrid(){gt+=0.012;cx.clearRect(0,0,1080,1080);
+    const litDot=stage.classList.contains('light');
+    for(const d of dots){const s=1.1+Math.sin(gt+d.ph*3)*0.5;
+      cx.beginPath();cx.arc(d.x,d.y,Math.max(.4,s),0,7);
+      cx.fillStyle=litDot?'rgba(20,20,24,'+(0.10+s*0.05)+')':'rgba(180,185,170,'+(0.06+s*0.05)+')';cx.fill();}
+    requestAnimationFrame(drawGrid);}
+  drawGrid();
+
+  function scene(id, artHTML, capHTML){
+    const s=document.createElement('section'); s.className='scene'; s.id=id;
+    s.innerHTML='<div class="zone-art">'+artHTML+'</div><div class="zone-cap">'+(capHTML||'')+'</div>';
+    root.appendChild(s); return s;
+  }
+  function show(id){ document.querySelectorAll('.scene').forEach(s=>s.style.opacity=0); A('#'+id,{opacity:[0,1],duration:280,easing:'easeOutQuad'}); }
+  function draw(sel,dur,delay){document.querySelectorAll(sel).forEach(p=>{const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;anime({targets:p,strokeDashoffset:[L,0],duration:dur||700,delay:delay||0,easing:'easeInOutSine'});});}
+  const cap=(t,sub)=>'<div class="cap">'+t+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'');
+  const capIn=id=>{A('#'+id+' .cap',{opacity:[0,1],translateY:[20,0],duration:420});A('#'+id+' .sub',{opacity:[0,1],translateY:[12,0],duration:380,delay:220});};
+
+  // фирменная звезда-искра Кэмпа ❋ (4-конечная тонкая)
+  function starPath(cxp,cyp,r){return 'M'+cxp+' '+(cyp-r)+' Q'+cxp+' '+cyp+' '+(cxp+r)+' '+cyp+' Q'+cxp+' '+cyp+' '+cxp+' '+(cyp+r)+' Q'+cxp+' '+cyp+' '+(cxp-r)+' '+cyp+' Q'+cxp+' '+cyp+' '+cxp+' '+(cyp-r)+' Z';}
+
+  // ===== ХЕЛПЕР: облако точек в SVG, которое собирается в целевые позиции =====
+  // pts: массив [x,y] целевых. Точки прилетают из хаоса → в форму.
+  function particleField(svg, pts, opt){opt=opt||{};
+    const g=document.createElementNS(NS,'g');g.setAttribute('class',opt.cls||'pf');svg.appendChild(g);
+    const els=pts.map((p,i)=>{const c=document.createElementNS(NS,'circle');
+      c.setAttribute('r',opt.r||3.2);c.setAttribute('fill',opt.color||INK);
+      c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.style.opacity=0;g.appendChild(c);return c;});
+    els.forEach((c,i)=>{const ang=i*2.399, rad=180+((i*53)%160);
+      anime({targets:c,translateX:[Math.cos(ang)*rad,0],translateY:[Math.sin(ang)*rad,0],
+        opacity:[0,opt.op!=null?opt.op:1],scale:[0,1],duration:opt.dur||700,
+        delay:(opt.delay||0)+i*(opt.stag||6),easing:'easeOutExpo'});});
+    return {g,els};}
+
+  // рассыпать поле в пыль
+  function scatter(els,delay){els.forEach((c,i)=>{const ang=i*2.1,rad=120+((i*71)%180);
+    anime({targets:c,translateX:Math.cos(ang)*rad,translateY:Math.sin(ang)*rad,opacity:[c.style.opacity||1,0],
+      scale:[1,0],duration:520,delay:(delay||0)+i*4,easing:'easeInExpo'});});}
+
+  // ===== СЦЕНЫ (dot-grid premium) =====
+
+  // 0 · рука-курсор из точек → рассыпается (0.0) «не вношу руками»
+  scene('c0','<svg width="520" height="440" viewBox="0 0 520 440" id="c0svg"></svg>',
+    cap('правки — <span class="lime">больше не руками</span>'));
+
+  // 1 · клиент → список доработок (точки строятся в строки) (2.4)
+  scene('c1','<svg width="560" height="420" viewBox="0 0 560 420" id="c1svg"></svg>',
+    cap('клиент шлёт <span class="lime">список правок</span>'));
+
+  // 2 · список → в Claude Code (поток точек в ноду) (6.0)
+  scene('c2','<svg width="560" height="420" viewBox="0 0 560 420" id="c2svg"></svg>',
+    cap('уходит в <span class="lime">Claude Code</span>'));
+
+  // 3 · вносит + отчёт (галочки-ноды набегают) (8.2)
+  scene('c3','<svg width="520" height="420" viewBox="0 0 520 420" id="c3svg"></svg>',
+    cap('он <span class="lime">вносит</span> и отчитывается'));
+
+  // 4 · 90% — точки заполняют кольцо-данные (10.5)
+  scene('c4','<svg width="440" height="440" viewBox="0 0 440 440" id="c4svg"></svg>',
+    cap('<span class="lime">90%</span> — корректно'));
+
+  // 5 · кроме творческого — 1 нода-звезда отдельно (14.8)
+  scene('c5','<svg width="480" height="420" viewBox="0 0 480 420" id="c5svg"></svg>',
+    cap('кроме <span class="lime">творческого</span>'));
+
+  // 6 · как настроить — переход (17.5)
+  scene('c6','<svg width="300" height="360" viewBox="0 0 300 360" id="c6svg"></svg>',
+    cap('как <span class="lime">настроить</span>'));
+
+  // 7 · меню Customize → Connectors (точки-строки меню) (19.4)
+  scene('c7','<div id="c7ui" style="position:relative;width:600px;height:400px"></div>',
+    cap('раздел <span class="lime">Customize</span>'));
+
+  // 8 · Figma подключается — две сетки соединяются нодами (22.3)
+  scene('c8','<svg width="600" height="420" viewBox="0 0 600 420" id="c8svg"></svg>',
+    cap('подключаем <span class="lime">Figma</span>'));
+
+  // 9 · ссылка + правки → вносит (24→30) (25.6)
+  scene('c9','<svg width="600" height="420" viewBox="0 0 600 420" id="c9svg"></svg>',
+    cap('ссылка + правки — <span class="lime">готово</span>'));
+
+  // 10 · проверь правки — сканлайн по строкам (31.5)
+  scene('c10','<svg width="560" height="420" viewBox="0 0 560 420" id="c10svg"></svg>',
+    cap('но сначала <span class="lime">проверь</span>'));
+
+  // 11 · стартер-пак — точки складываются в объём (37.0)
+  scene('c11','<svg width="480" height="440" viewBox="0 0 480 440" id="c11svg"></svg>',
+    cap('<span class="lime">стартер-пак</span>','скиллы + уроки — в описании'));
+
+  // ======= МОНТАЖ =======
+  const CUES=[
+    [0.0, en_c0,'dark'],[1.6, en_c0b,'dark'],
+    [2.4, en_c1,'dark'],
+    [6.0, en_c2,'dark'],
+    [8.2, en_c3,'dark'],
+    [10.5,en_c4,'dark'],[13.3,en_c4b,'dark'],
+    [14.8,en_c5,'dark'],
+    [17.5,en_c6,'light'],
+    [19.4,en_c7,'light'],[21.4,en_c7b,'light'],
+    [22.3,en_c8,'light'],
+    [25.6,en_c9,'light'],[30.2,en_c9b,'light'],
+    [31.5,en_c10,'dark'],[34.6,en_c10b,'dark'],
+    [37.0,en_c11,'dark'],[40.5,en_c11b,'dark'],
+  ];
+
+  // ===================== EN-ФУНКЦИИ =====================
+
+  // облако точек в форме РУКИ-курсора (грубый силуэт стрелки мыши по сетке)
+  function handPts(){const pts=[];const shape=[
+    '1000000','1100000','1110000','1111000','1111100','1111110','1111111','1111100','1101100','1001010','0001010','0000101'];
+    shape.forEach((row,ry)=>{[...row].forEach((v,rx)=>{if(v==='1')pts.push([180+rx*26,90+ry*26]);});});
+    return pts;}
+
+  function en_c0(){dark();show('c0');const svg=document.getElementById('c0svg');svg.innerHTML='';
+    window._c0=particleField(svg,handPts(),{color:INK,r:5,stag:9,dur:800});capIn('c0');}
+  // 0b · рука рассыпается в пыль → аккуратная мини-сетка (авто) на её месте
+  function en_c0b(){if(!window._c0)return;scatter(window._c0.els,0);
+    const svg=document.getElementById('c0svg');
+    setTimeout(()=>{const grid=[];for(let y=0;y<4;y++)for(let x=0;x<4;x++)grid.push([200+x*40,140+y*40]);
+      particleField(svg,grid,{color:LIME,r:5,stag:14,dur:600,cls:'c0auto'});},420);}
+
+  // 1 · список правок — точки строятся в 3 строки
+  function en_c1(){dark();show('c1');const svg=document.getElementById('c1svg');svg.innerHTML='';
+    const pts=[];[0,1,2].forEach(r=>{const n=[9,7,8][r];for(let i=0;i<n;i++)pts.push([120+i*34,120+r*80]);});
+    // маркер-ноды клиента слева
+    particleField(svg,pts,{color:INK,r:4,stag:7,dur:650});
+    // подпись строк — лаймовые тире-префиксы
+    [0,1,2].forEach(r=>{const l=document.createElementNS(NS,'rect');l.setAttribute('x',80);l.setAttribute('y',114+r*80);l.setAttribute('width',22);l.setAttribute('height',8);l.setAttribute('rx',4);l.setAttribute('fill',LIME);l.style.opacity=0;svg.appendChild(l);
+      A(l,{opacity:[0,1],scaleX:[0,1],duration:300,delay:400+r*120});});capIn('c1');}
+
+  // 2 · поток точек в ноду Claude
+  function en_c2(){dark();show('c2');const svg=document.getElementById('c2svg');svg.innerHTML='';
+    // центральная нода
+    const node=document.createElementNS(NS,'circle');node.setAttribute('cx',430);node.setAttribute('cy',210);node.setAttribute('r',54);node.setAttribute('fill','none');node.setAttribute('stroke',LIME);node.setAttribute('stroke-width',3);node.style.opacity=0;svg.appendChild(node);
+    A(node,{opacity:[0,1],scale:[.5,1],transformOrigin:['430px 210px','430px 210px'],duration:500,easing:'easeOutBack'});
+    // точки летят слева в ноду
+    const stream=[];for(let i=0;i<26;i++)stream.push(i);
+    stream.forEach(i=>{const c=document.createElementNS(NS,'circle');c.setAttribute('r',3.4);c.setAttribute('fill',INK);
+      c.setAttribute('cx',60);c.setAttribute('cy',120+(i%14)*13);c.style.opacity=0;svg.appendChild(c);
+      anime({targets:c,cx:[60,430],cy:[120+(i%14)*13,210],opacity:[0,1,1,0],scale:[.6,1,1,.4],duration:900,delay:200+i*30,easing:'easeInOutQuad'});});
+    // пульс ноды
+    A(node,{r:[54,60,54],duration:900,delay:700,loop:true,easing:'easeInOutSine'});capIn('c2');}
+
+  // 3 · макет-ноды меняются + галочки-ноды
+  function en_c3(){dark();show('c3');const svg=document.getElementById('c3svg');svg.innerHTML='';
+    // структура из точек-строк (макет)
+    const pts=[];for(let r=0;r<4;r++){const n=[6,9,7,5][r];for(let i=0;i<n;i++)pts.push([100+i*34,110+r*70]);}
+    particleField(svg,pts,{color:INK,r:4,stag:5,dur:550});
+    // 3 галочки набегают справа (тонкая линия)
+    [0,1,2].forEach(k=>{const p=document.createElementNS(NS,'path');p.setAttribute('d','M410 '+(120+k*80)+' l14 15 26 -30');p.setAttribute('fill','none');p.setAttribute('stroke',LIME);p.setAttribute('stroke-width',4);p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');p.setAttribute('class','c3ck');svg.appendChild(p);});
+    document.querySelectorAll('#c3 .c3ck').forEach((p,i)=>{const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;anime({targets:p,strokeDashoffset:[L,0],duration:340,delay:600+i*240,easing:'easeInOutSine'});});capIn('c3');}
+
+  // 4 · 90% — точки по кольцу заполняются как данные
+  function en_c4(){dark();show('c4');const svg=document.getElementById('c4svg');svg.innerHTML='';
+    const cxp=220,cyp=210,R=150,N=48;
+    // все точки-слоты серым
+    const slots=[];for(let i=0;i<N;i++){const a=-Math.PI/2+i/N*2*Math.PI;const x=cxp+Math.cos(a)*R,y=cyp+Math.sin(a)*R;
+      const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',5);c.setAttribute('fill','#2a2c26');svg.appendChild(c);slots.push(c);}
+    // 90% заполняются лаймом по очереди
+    const lit=Math.round(N*0.9);
+    slots.slice(0,lit).forEach((c,i)=>{anime({targets:c,fill:LIME,r:[5,7,6],duration:200,delay:300+i*24,easing:'easeOutQuad'});});
+    // число в центре
+    const t=document.createElementNS(NS,'text');t.setAttribute('x',cxp);t.setAttribute('y',cyp+30);t.setAttribute('text-anchor','middle');t.setAttribute('font-family','Manrope');t.setAttribute('font-weight','800');t.setAttribute('font-size','96');t.setAttribute('fill',INK);t.setAttribute('id','c4n');svg.appendChild(t);
+    const o={v:0};anime({targets:o,v:90,duration:1400,easing:'easeInOutCubic',round:1,update:()=>{document.getElementById('c4n').textContent=Math.round(o.v)+'%';}});capIn('c4');}
+  // 4b · лёгкий импульс кольца
+  function en_c4b(){A('#c4svg circle[fill="'+LIME+'"]',{scale:[1,1.15,1],transformOrigin:['center','center'],duration:600,delay:anime.stagger(8),easing:'easeInOutSine'});}
+
+  // 5 · кроме творческого — одна нода-звезда отдельно от сетки
+  function en_c5(){dark();show('c5');const svg=document.getElementById('c5svg');svg.innerHTML='';
+    // сетка авто-нод (лайм-мелкие)
+    const grid=[];for(let y=0;y<4;y++)for(let x=0;x<5;x++)grid.push([80+x*54,110+y*54]);
+    particleField(svg,grid,{color:'#5c6b2e',r:4,stag:5,dur:500});
+    // отдельная крупная звезда — «творческое = человек»
+    const st=document.createElementNS(NS,'path');st.setAttribute('d',starPath(390,200,52));st.setAttribute('fill',LIME);st.setAttribute('class','c5st');st.style.opacity=0;svg.appendChild(st);
+    A('#c5 .c5st',{opacity:[0,1],scale:[0,1],rotate:['-40deg','0deg'],transformOrigin:['390px 200px','390px 200px'],duration:650,delay:400,easing:'easeOutBack'});
+    A('#c5 .c5st',{scale:[1,1.12,1],transformOrigin:['390px 200px','390px 200px'],duration:1100,delay:1000,loop:true,easing:'easeInOutSine'});capIn('c5');}
+
+  // 6 · переход — точки складываются в стрелку вниз
+  function en_c6(){light();show('c6');const svg=document.getElementById('c6svg');svg.innerHTML='';
+    const pts=[[150,40],[150,80],[150,120],[150,160],[150,200],[110,170],[190,170],[130,190],[170,190]];
+    particleField(svg,pts,{color:'#0c0c0e',r:6,stag:35,dur:500});
+    A('#c6svg .pf',{translateY:[0,14,0],duration:1000,delay:700,loop:true,easing:'easeInOutSine'});capIn('c6');}
+
+  // 7 · UI-мокап меню (тёмный премиум)
+  function buildMenu(box,active){box.innerHTML='';const items=['General','Customize','Connectors','Permissions'];
+    const win=document.createElement('div');
+    win.style.cssText='width:600px;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.14);border:1px solid #e6e6e0';
+    win.innerHTML='<div style="height:52px;background:#f4f5f2;display:flex;align-items:center;padding:0 24px;font-family:JB,monospace;font-size:19px;letter-spacing:1px;color:#a3a49c;border-bottom:1px solid #ececE6">SETTINGS</div>';
+    const list=document.createElement('div');list.style.cssText='padding:16px';
+    items.forEach((it,i)=>{const row=document.createElement('div');row.className='c7row';
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-radius:12px;font-family:JB,monospace;font-size:27px;color:'+(i===active?'#0c0c0e':'#b0b1a8')+';opacity:0';
+      row.innerHTML='<span>'+it+'</span>'+(i===active?'<span style="width:12px;height:12px;border-radius:50%;background:'+LIME+'"></span>':'');
+      list.appendChild(row);});
+    win.appendChild(list);box.appendChild(win);}
+  function en_c7(){light();show('c7');const box=document.getElementById('c7ui');buildMenu(box,1);
+    A('#c7 .c7row',{opacity:[0,1],translateX:[-18,0],duration:320,delay:anime.stagger(75)});
+    setTimeout(()=>{const r=box.querySelectorAll('.c7row')[1];if(r)A(r,{backgroundColor:['rgba(198,243,58,0)','rgba(198,243,58,.22)'],duration:400});},750);capIn('c7');}
+  function en_c7b(){const box=document.getElementById('c7ui');const rows=box.querySelectorAll('.c7row');if(!rows.length)return;
+    if(rows[1]){A(rows[1],{backgroundColor:['rgba(198,243,58,.22)','rgba(198,243,58,0)'],color:['#0c0c0e','#b0b1a8'],duration:350});const d=rows[1].querySelector('span:last-child');if(d)d.style.background='transparent';}
+    if(rows[2]){A(rows[2],{backgroundColor:['rgba(198,243,58,0)','rgba(198,243,58,.22)'],color:['#b0b1a8','#0c0c0e'],duration:400,delay:120});
+      let d=rows[2].querySelector('span:last-child');if(!d){d=document.createElement('span');rows[2].appendChild(d);}d.style.cssText='width:12px;height:12px;border-radius:50%;background:'+LIME;}}
+
+  // 8 · две сетки точек соединяются линиями-нодами (Figma ↔ Claude)
+  function en_c8(){light();show('c8');const svg=document.getElementById('c8svg');svg.innerHTML='';
+    // левый кластер (Figma) + правый (Claude)
+    const L=[],Rr=[];for(let y=0;y<3;y++)for(let x=0;x<3;x++){L.push([90+x*44,120+y*60]);Rr.push([380+x*44,120+y*60]);}
+    particleField(svg,L,{color:'#0c0c0e',r:5,stag:4,dur:450});
+    particleField(svg,Rr,{color:'#0c0c0e',r:5,stag:4,dur:450,delay:200});
+    // соединительные линии
+    const edges=[[L[2],Rr[0]],[L[5],Rr[3]],[L[8],Rr[6]],[L[4],Rr[4]]];
+    edges.forEach((e,i)=>{const ln=document.createElementNS(NS,'line');ln.setAttribute('x1',e[0][0]);ln.setAttribute('y1',e[0][1]);ln.setAttribute('x2',e[1][0]);ln.setAttribute('y2',e[1][1]);ln.setAttribute('stroke','#8fb01e');ln.setAttribute('stroke-width',2.5);ln.setAttribute('class','c8e');svg.appendChild(ln);});
+    draw('#c8 .c8e',500,700);capIn('c8');}
+
+  // 9 · ссылка + правки → вносит (два потока в макет)
+  function en_c9(){light();show('c9');const svg=document.getElementById('c9svg');svg.innerHTML='';
+    // две карточки-ноды
+    ['figma ↗','правки'].forEach((tx,k)=>{const g=document.createElementNS(NS,'g');g.setAttribute('class','c9card');g.style.opacity=0;
+      g.innerHTML='<rect x="30" y="'+(90+k*160)+'" width="180" height="70" rx="14" fill="none" stroke="#0c0c0e" stroke-width="2.5"/><text x="120" y="'+(133+k*160)+'" text-anchor="middle" font-family="JB,monospace" font-size="24" fill="#0c0c0e">'+tx+'</text>';svg.appendChild(g);});
+    A('#c9 .c9card',{opacity:[0,1],translateX:[-26,0],duration:400,delay:anime.stagger(140),easing:'easeOutBack'});
+    // потоки точек к правому макету
+    const target=[];for(let r=0;r<4;r++)for(let i=0;i<5;i++)target.push([380+i*40,110+r*60]);
+    setTimeout(()=>particleField(svg,target,{color:'#8fb01e',r:4,stag:6,dur:600,cls:'c9t'}),500);capIn('c9');}
+  function en_c9b(){A('#c9 .c9t circle',{scale:[1,1.25,1],transformOrigin:['center','center'],duration:500,delay:anime.stagger(6),easing:'easeInOutSine'});}
+
+  // 10 · проверь — сканлайн проходит по строкам-точкам
+  function en_c10(){dark();show('c10');const svg=document.getElementById('c10svg');svg.innerHTML='';
+    const pts=[];for(let r=0;r<4;r++){const n=[8,6,7,5][r];for(let i=0;i<n;i++)pts.push([110+i*40,110+r*72]);}
+    particleField(svg,pts,{color:INK,r:4,stag:4,dur:450});
+    // сканлайн (лаймовая линия сверху вниз)
+    const sc=document.createElementNS(NS,'line');sc.setAttribute('x1',70);sc.setAttribute('x2',490);sc.setAttribute('y1',90);sc.setAttribute('y2',90);sc.setAttribute('stroke',LIME);sc.setAttribute('stroke-width',3);sc.setAttribute('class','c10sc');sc.style.opacity=0;svg.appendChild(sc);
+    A('#c10 .c10sc',{opacity:[0,1,1,0],translateY:[0,300],duration:2200,delay:400,easing:'easeInOutSine'});capIn('c10');}
+  function en_c10b(){const svg=document.getElementById('c10svg');if(!svg||svg.querySelector('.c10ok'))return;
+    const ck=document.createElementNS(NS,'path');ck.setAttribute('class','c10ok');ck.setAttribute('d','M420 300 l18 20 34 -42');ck.setAttribute('fill','none');ck.setAttribute('stroke',LIME);ck.setAttribute('stroke-width',7);ck.setAttribute('stroke-linecap','round');ck.setAttribute('stroke-linejoin','round');svg.appendChild(ck);
+    draw('#c10 .c10ok',420);}
+
+  // 11 · стартер-пак — точки складываются в изометрический куб
+  function en_c11(){dark();show('c11');const svg=document.getElementById('c11svg');svg.innerHTML='';
+    // рёбра куба как целевые точки (изометрия)
+    const cxp=240,cyp=200,s=110;
+    const top=[[cxp,cyp-s],[cxp+s,cyp-s/2],[cxp,cyp],[cxp-s,cyp-s/2]];
+    const cube=[]; // верхняя грань + боковые ребра
+    top.forEach(p=>cube.push(p));
+    cube.push([cxp,cyp+s],[cxp+s,cyp+s/2],[cxp-s,cyp+s/2]);
+    // много точек по рёбрам
+    function edgePts(a,b,n){const arr=[];for(let i=0;i<=n;i++)arr.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]);return arr;}
+    let pts=[];
+    pts=pts.concat(edgePts(top[0],top[1],5),edgePts(top[1],top[2],5),edgePts(top[2],top[3],5),edgePts(top[3],top[0],5));
+    pts=pts.concat(edgePts(top[1],[cxp+s,cyp+s/2],5),edgePts([cxp+s,cyp+s/2],[cxp,cyp+s],5),edgePts([cxp,cyp+s],[cxp-s,cyp+s/2],5),edgePts([cxp-s,cyp+s/2],top[3],5),edgePts(top[2],[cxp,cyp+s],5));
+    particleField(svg,pts,{color:LIME,r:4,stag:5,dur:650});
+    // стрелка вниз из точек под кубом
+    setTimeout(()=>{const arr=[[240,330],[240,360],[240,390],[214,368],[266,368]];particleField(svg,arr,{color:INK,r:5,stag:40,dur:400,cls:'c11arr'});
+      A('#c11 .c11arr',{translateY:[0,12,0],duration:900,delay:500,loop:true,easing:'easeInOutSine'});},900);capIn('c11');}
+  function en_c11b(){A('#c11svg .pf circle',{scale:[1,1.2,1],transformOrigin:['center','center'],duration:700,delay:anime.stagger(4),easing:'easeInOutSine'});}
+
+  // ПЛЕЕР
+  let startT=null, fired=[];
+  function loop(ts){if(startT===null)startT=ts;const t=(ts-startT)/1000;
+    CUES.forEach((c,i)=>{if(!fired[i]&&t>=c[0]){fired[i]=true;c[1]();}});
+    if(t<44)requestAnimationFrame(loop);}
+  function start(){A(['#mtl','#mtr'],{opacity:[0,1],translateY:[-10,0],duration:400,delay:anime.stagger(120)});startT=null;fired=[];requestAnimationFrame(loop);}
+  window.startAnimation=function(){document.querySelectorAll('.scene').forEach(s=>s.style.opacity=0);start();};
+  const qa=new URLSearchParams(location.search).get('qa');
+  if(qa!=='1')start();
+</script>
+</body>
+</html>
