@@ -1,0 +1,3 @@
+# Скрипты для macOS/Linux всегда с LF, иначе bash на Windows-клонах ломается
+*.sh text eol=lf
+*.py text eol=lf

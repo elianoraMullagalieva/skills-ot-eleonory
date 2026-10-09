@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Графика-наложение — движок</title>
+<!--
+  ДВИЖОК ГРАФИКИ-НАЛОЖЕНИЯ (reels-montazh-pro). Кадр = чистая функция от времени t → покадровый рендер, синхрон до кадра.
+  Как пользоваться:
+    1. Скопируй эту папку движка (grafika.html + fonts/) в папку проекта.
+    2. Рядом положи:
+         plans.js  — куски исходника для каждого ролика (делает cut.py --plans-js) и, по желанию, формат: window.STAGE='5x3'
+         words.js  — слова речи window.SPEECH=[[слово, сек]] (transcribe.py --words-js) для W('слово'); не нужен — удали тег ниже
+         scenes*.js — сцены: S(a, b, 'D'|'L', html, draw). a,b — секунды ИСХОДНИКА (не ролика!)
+    3. Открой grafika.html?reel=1 в браузере (пробел — пауза, ←/→ ±1 с, ?t=12.3 — стоп-кадр).
+    4. Рендер: python3 scripts/render_overlay.py --html grafika.html --reel 1 --scale 2 --out Наложение_ролик1.mp4
+  Одна библиотека сцен на все ролики: render(t) сам переводит время ролика во время исходника по plans.js
+  и показывает только сцены, попавшие в куски этого ролика. Без plans.js — обычный режим «один ролик», время = время видео.
+  Форматы: '5x3' 1080×648 (рендер ×2 = 2160×1296), '1080x756', 'sq' 1080×1080, или [ширина, высота].
+-->
+<style>
+@font-face{font-family:M;src:url(fonts/Manrope-Light.ttf);font-weight:300}
+@font-face{font-family:M;src:url(fonts/Manrope-Bold.ttf);font-weight:700}
+@font-face{font-family:M;src:url(fonts/Manrope-ExtraBold.ttf);font-weight:800}
+@font-face{font-family:JB;src:url(fonts/JetBrainsMono-Regular.ttf)}
+:root{
+  /* 3 размера текста — только они (значения ставит движок под формат, см. FORMATS) */
+  --t-hero:96px; --t-mid:46px; --t-cap:28px;
+  /* ОДИН акцент. Бери с сайта/бренда автора (со скриншотов, не из CSS) */
+  --red:#c42a1e;
+  /* светлая тема */ --l-bg:#F4F4F2; --l-ink:#0b0d0c; --l-mut:#8a8f8b; --l-line:rgba(0,0,0,.12); --l-card:#ffffff;
+  /* тёмная тема */  --d-bg:#070707; --d-ink:#ffffff; --d-mut:#7d827e; --d-line:rgba(255,255,255,.18); --d-card:#121514;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;overflow:hidden;font-family:M,sans-serif}
+#stage{position:relative;width:1080px;height:648px;overflow:hidden;background:#000;transform-origin:0 0}
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden;overflow:hidden}
+.scene.L{--bg:var(--l-bg);--ink:var(--l-ink);--mut:var(--l-mut);--line:var(--l-line);--card:var(--l-card);color:var(--ink)}
+.scene.D{--bg:var(--d-bg);--ink:var(--d-ink);--mut:var(--d-mut);--line:var(--d-line);--card:var(--d-card);color:var(--ink)}
+.bg{position:absolute;inset:0;background:var(--bg)}
+.scene.D .bg::after{content:"";position:absolute;left:50%;top:50%;width:min(800px,90%);aspect-ratio:1;transform:translate(-50%,-55%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.07),rgba(255,255,255,0) 62%)}
+.scene.L .bg::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.9),rgba(255,255,255,0) 60%)}
+.grain{position:absolute;inset:-60px;pointer-events:none;opacity:.10;mix-blend-mode:overlay;z-index:60;
+  background-image:url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");background-size:160px}
+.hero{font-weight:800;font-size:var(--t-hero);letter-spacing:-.06em;line-height:.95;white-space:nowrap}
+.mid{font-weight:800;font-size:var(--t-mid);letter-spacing:-.045em;line-height:1.02;white-space:nowrap}
+.cap{font-weight:300;font-size:var(--t-cap);letter-spacing:-.02em;line-height:1.15;color:var(--mut);white-space:nowrap}
+.mono{font-family:JB,monospace;font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);white-space:nowrap}
+.red{color:var(--red)}
+.a{position:absolute}
+.cx{position:absolute;left:0;right:0;text-align:center}
+.w{display:inline-block;white-space:pre}
+svg{overflow:visible}
+.st{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.card{position:absolute;background:var(--card);border-radius:22px}
+.scene.L .card{box-shadow:0 10px 30px rgba(0,0,0,.08),0 1px 0 rgba(0,0,0,.04)}
+.scene.D .card{border:1.5px solid rgba(255,255,255,.22)}
+.sk{position:absolute;height:14px;border-radius:7px;background:var(--line)}
+.dot{position:absolute;border-radius:50%}
+.shine{position:absolute;inset:0;border-radius:inherit;pointer-events:none;overflow:hidden}
+.shine::before{content:"";position:absolute;top:-20%;bottom:-20%;width:38%;left:var(--sx,-60%);transform:skewX(-20deg);background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))}
+/* фирменный декор: крестики по углам и счётчик сцен (убери, если у автора другой стиль) */
+.cross{position:absolute;width:26px;height:26px;z-index:50;opacity:.55}.cross::before,.cross::after{content:"";position:absolute;background:var(--cc,#fff)}.cross::before{left:12.5px;top:0;width:1px;height:26px}.cross::after{top:12.5px;left:0;height:1px;width:26px}
+#num{position:absolute;left:0;right:0;bottom:18px;text-align:center;z-index:50;font:20px JB,monospace;letter-spacing:.14em;opacity:.45}
+#hud{position:fixed;left:8px;bottom:8px;font:14px JB,monospace;color:#888;z-index:99}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="num">[ 01 / 01 ]</div>
+  <div class="cross" style="left:28px;top:24px"></div><div class="cross" style="right:28px;top:24px"></div><div class="cross" style="left:28px;bottom:20px"></div><div class="cross" style="right:28px;bottom:20px"></div>
+  <div class="grain" id="grain"></div>
+</div>
+<div id="hud"></div>
+<script>
+/* ======================= ДВИЖОК: кадр = чистая функция от t (сек) ======================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const cl=x=>x<0?0:x>1?1:x, L=(a,b,p)=>a+(b-a)*p;
+function bez(x1,y1,x2,y2){const X=s=>3*x1*s*(1-s)**2+3*x2*s*s*(1-s)+s**3,Y=s=>3*y1*s*(1-s)**2+3*y2*s*s*(1-s)+s**3;
+  return p=>{if(p<=0)return 0;if(p>=1)return 1;let lo=0,hi=1;for(let i=0;i<24;i++){const m=(lo+hi)/2;X(m)<p?lo=m:hi=m;}return Y((lo+hi)/2);};}
+const EZ={soft:bez(.22,1,.36,1),expo:bez(.16,1,.3,1),io:t=>-(Math.cos(Math.PI*t)-1)/2,lin:t=>t,in:t=>t*t*t,
+  back:t=>{const c=1.4;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)}};
+/* СПОКОЙНЫЙ ТЕМП: все движения в 1.35 раза медленнее; моменты СТАРТА не сдвигаются — синхрон с речью сохраняется */
+const SLOW=window.SLOW||1.35;
+const P=(t,a,d=.5,e='soft')=>EZ[e](cl((t-a)/(d*SLOW)));
+const R=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};   /* детерминированный «рандом» (Math.random нельзя) */
+function T(el,{x=0,y=0,s=1,r=0,o,b}={}){if(!el)return;el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg) scale(${s})`;
+  if(o!==undefined)el.style.opacity=o;if(b!==undefined)el.style.filter=b>0.05?`blur(${b}px)`:'none';}
+/* мягкое появление: подъём + проявление + блюр. out: момент ухода (блюр-аут) */
+function IN(el,t,a,{dx=0,dy=22,d=.55,s0=1,blur=10,e='soft',out=null,od=.25}={}){
+  const p=P(t,a,d,e);let o=cl((t-a)/(d*.5*SLOW)),b=blur*(1-p),y=dy*(1-p),s=L(s0,1,p);
+  if(out!==null){const q=P(t,out,od,'soft');o*=1-q;b+=blur*q;y-=10*q;}
+  T(el,{x:dx*(1-p),y,s,o,b});return p;}
+/* текст по словам: каждое слово всплывает из блюра со stagger */
+function WORDS(el,t,a,{st=.07,d=.5,dy=18,blur=10,out=null}={}){
+  if(!el._w){el._w=1;el.innerHTML=el.innerHTML.replace(/(<[^>]+>)|([^\s<]+)/g,(m,tag,w)=>tag?tag:`<span class="w">${w}</span>`);}
+  $$('.w',el).forEach((w,i)=>IN(w,t,a+i*st*SLOW,{dy,d,blur,out}));el.style.opacity=1;}
+/* слова по ТОЧНЫМ секундам речи: i-е слово всплывает в times[i] */
+function WT(el,t,times,{out=null,dy=16}={}){
+  if(!el._w){el._w=1;el.innerHTML=el.innerHTML.replace(/(<[^>]+>)|([^\s<]+)/g,(m,tag,w)=>tag?tag:`<span class="w">${w}</span>`);}
+  $$('.w',el).forEach((w,i)=>{const n=times.length,a=i<n?times[i]:times[n-1]+(i-n+1)*.08;IN(w,t,a,{dy,d:.5,blur:10,out});});
+  el.style.opacity=1;}
+/* секунда слова из words.js: W('сайтов') / W('сайтов',2) — 2-е вхождение / W('сайтов',1,46.1) — запасное значение */
+function W(word,n=1,fallback=null){const k=word.toLowerCase().replace(/ё/g,'е');let c=0;
+  for(const [w,t] of (window.SPEECH||[])){if(w.toLowerCase().replace(/ё/g,'е').replace(/[^\p{L}\p{N}-]/gu,'').startsWith(k)&&++c==n)return t;}
+  if(fallback===null)console.error('W(): нет слова «'+word+'» №'+n);return fallback??0;}
+function DRAW(el,p){el.style.strokeDasharray='1 1';el.style.strokeDashoffset=1-p;el.style.opacity=p>0.001?1:0;}   /* у path обязателен pathLength="1" */
+function SHINE(el,t,a,d=.45){const p=P(t,a,d,'io');el.style.setProperty('--sx',L(-60,130,p)+'%');}
+const typed=(s,t,a,per=.04)=>s.slice(0,Math.max(0,Math.floor((t-a)/per)));
+const CURSOR=`<svg width="44" height="54" viewBox="0 0 30 40"><path d="M0 0 L0 34 L9 26 L15 40 L21 37 L15 24 L27 24 Z" fill="#fff" stroke="#0b0d0c" stroke-width="2"/></svg>`;
+const SPARK=(c='currentColor',s=40)=>`<svg width="${s}" height="${s}" viewBox="-20 -20 40 40"><path d="M0 -18 C2 -4 4 -2 18 0 C4 2 2 4 0 18 C-2 4 -4 2 -18 0 C-4 -2 -2 -4 0 -18Z" fill="${c}"/></svg>`;
+const PERSON=(w=70)=>`<svg width="${w}" height="${w*80/70}" viewBox="0 0 70 80"><circle class="st" cx="35" cy="24" r="16"/><path class="st" d="M5 78 C5 52 65 52 65 78"/></svg>`;
+/* окно браузера / приложения */
+const BROWSER=(w,h,inner='')=>`<div class="card brw" style="width:${w}px;height:${h}px;overflow:hidden">
+ <div class="a" style="left:22px;top:20px;display:flex;gap:10px">${[0,1,2].map(()=>`<i style="width:14px;height:14px;border-radius:50%;background:var(--line);display:block"></i>`).join('')}</div>
+ <div class="a" style="left:110px;right:110px;top:16px;height:22px;border-radius:11px;background:var(--line);opacity:.7"></div>
+ <div class="a" style="left:0;right:0;top:54px;height:1px;background:var(--line)"></div>${inner}<div class="shine"></div></div>`;
+
+/* ======================= ВСТАВКА ЗАПИСИ ЭКРАНА (покадрово) =======================
+   Кадры: scripts/clip_frames.py запись.mp4 frames/имя --from A --to B  → frames/имя/f_001.jpg …
+   В сцене: <img class="fr" style="position:absolute;left:0;top:0;width:Wpx;height:Hpx;transform-origin:0 0">
+            const rec=timeMap([[сек_исходника, сек_записи], …]);   // кусочно-линейная привязка записи к словам
+            setFrame(q('.fr'),'frames/имя', frameNo(rec(t), A));     // A = --from
+            place(q('.fr'),W,H,зум,фокус_x,фокус_y);                 // наезд камерой на нужное место
+   render() ждёт decode() каждого нового кадра — в видео нет пустых/недогруженных кадров. */
+window._pend=window._pend||[];
+function setFrame(img,dir,k){const src=`${dir}/f_${String(Math.max(1,k)).padStart(3,'0')}.jpg`;
+  if(img._s!==src){img._s=src;img.src=src;window._pend.push(img.decode().catch(()=>{}));}}
+const frameNo=(recT,from,fps=30,max=1e9)=>Math.min(max,Math.max(1,1+Math.round((recT-from)*fps)));
+function timeMap(M){return t=>{for(let i=M.length-1;i>0;i--){const [a0,r0]=M[i-1],[a1,r1]=M[i];if(a1>a0&&t>=a0&&t<=a1)return r0+(r1-r0)*(t-a0)/(a1-a0);}
+  return t<M[0][0]?M[0][1]:M[M.length-1][1];};}
+function place(img,W,H,z=1,fx=.5,fy=.5){const iw=W*z,ih=H*z,lx=Math.min(0,Math.max(W-iw,W/2-fx*iw)),ly=Math.min(0,Math.max(H-ih,H/2-fy*ih));
+  img.style.transform=`translate(${lx}px,${ly}px) scale(${z})`;return [lx,ly,iw,ih];}
+function preload(dir){const i=new Image();i.src=`${dir}/f_001.jpg`;window._pend.push(i.decode().catch(()=>{}));}
+
+/* ======================= СЦЕНЫ ======================= */
+const SC=[];
+/* S(a,b,тема,html,draw): сцена видна с a до b (секунды ИСХОДНИКА); тема 'D' тёмная / 'L' светлая; draw(t,q,qa) */
+function S(a,b,theme,html,draw){const el=document.createElement('section');el.className='scene '+theme;
+  el.innerHTML='<div class="bg"></div>'+html;$('#stage').insertBefore(el,$('#num'));
+  SC.push({a,b,el,draw,q:s=>$(s,el),qa:s=>$$(s,el)});}
+</script>
+
+<!-- ======================= ПОДКЛЮЧИ СВОИ ФАЙЛЫ ======================= -->
+<script src="plans.js"></script>
+<script src="words.js"></script>
+<script>
+/* ======================= ФОРМАТ (после plans.js — там можно задать window.STAGE; до сцен — им нужны STAGE_W/STAGE_H) ======================= */
+const FORMATS={'5x3':[1080,648,96,46,28],'1080x756':[1080,756,108,50,31],'sq':[1080,1080,132,58,36]};
+const _qs=new URLSearchParams(location.search);
+(function(){const f=_qs.get('format')||window.STAGE||'5x3';let v=FORMATS[f];
+  if(Array.isArray(f)){const k=Math.min(f[0],f[1])/648;   /* свой размер: тексты растут с меньшей стороной, но не бесконечно */
+    v=[f[0],f[1],Math.round(96*Math.min(k,1.4)),Math.round(46*Math.min(k,1.3)),Math.round(28*Math.min(k,1.3))];}
+  if(!v){console.error('неизвестный формат '+f);v=FORMATS['5x3'];}
+  const st=$('#stage'),r=document.documentElement.style;st.style.width=v[0]+'px';st.style.height=v[1]+'px';
+  r.setProperty('--t-hero',v[2]+'px');r.setProperty('--t-mid',v[3]+'px');r.setProperty('--t-cap',v[4]+'px');window.STAGE_W=v[0];window.STAGE_H=v[1];})();
+</script>
+
+<script src="scenes.js"></script>
+<!-- <script src="scenes_2.js"></script>  ← остальные файлы сцен -->
+
+<script>
+/* ======================= РЕНДЕР =======================
+   Мульти-ролик: PLANS[reel] = [[начало, конец], …] в секундах ИСХОДНИКА (второй исходник = 1000 + его секунда).
+   render(t) переводит время ролика во время исходника и показывает только сцены этого куска. */
+const HAS_PLANS=typeof PLANS!=='undefined';
+const REEL=window.REEL=window.REEL||_qs.get('reel')||'1';
+const PLAN=HAS_PLANS?PLANS[REEL]:[[0,window.DURATION||10]];
+if(!PLAN)console.error('нет ролика '+REEL+' в plans.js');
+SC.sort((x,y)=>x.a-y.a);
+const USED=SC.filter(s=>PLAN.some(([a,b])=>s.a<b&&s.b>a));
+function srcTime(t){let off=0;for(let i=0;i<PLAN.length;i++){const [a,b]=PLAN[i],d=b-a;if(t<off+d||i==PLAN.length-1)return [i,a+(t-off)];off+=d;}}
+window.srcTime=srcTime;
+function render(t){
+  const [seg,ts]=srcTime(t);const [ca,cb]=PLAN[seg];
+  let idx=0,dark=true;
+  SC.forEach((s,i)=>{
+    const vis=ts>=s.a&&ts<s.b+.2&&s.a<cb&&s.b>ca;s.el.style.visibility=vis?'visible':'hidden';
+    if(!vis)return;
+    idx=USED.indexOf(s);dark=s.el.classList.contains('D');
+    const pin=P(ts,Math.max(s.a,ca),.28,'soft');   /* вход сцены (и после склейки кусков) — мягкое проявление */
+    s.el.style.opacity=1;s.el.style.zIndex=10+i;s.el.style.filter='none';s.el.style.transform='none';
+    const kids=s.el.children;for(let k=1;k<kids.length;k++){const c=kids[k];if(c._noFx)continue;
+      c.style.filter=pin<1?`blur(${6*(1-pin)}px)`:'';c.style.scale=String(L(1.03,1,pin));}
+    s.draw(ts,s.q,s.qa);});
+  const n=$('#num');if(n){n.textContent=`[ ${String(idx+1).padStart(2,'0')} / ${USED.length} ]`;n.style.color=dark?'#fff':'#0b0d0c';}
+  $$('.cross').forEach(c=>c.style.setProperty('--cc',dark?'#fff':'#0b0d0c'));
+  $('#grain').style.transform=`translate(${(R(Math.floor(t*12))*60)|0}px,${(R(Math.floor(t*12)+99)*60)|0}px)`;
+  if(window._pend&&window._pend.length)return Promise.all(window._pend.splice(0));  // ждём загрузку кадров записей экрана
+}
+window.render=render;window.DURATION=PLAN.reduce((s,[a,b])=>s+b-a,0);
+function fit(){const s=Math.min(innerWidth/STAGE_W,innerHeight/STAGE_H);$('#stage').style.transform=`scale(${s})`;}
+if(!_qs.has('render')){addEventListener('resize',fit);fit();
+  let t0=performance.now()/1000-(+_qs.get('t')||0),paused=_qs.has('t'),tp=+_qs.get('t')||0;
+  addEventListener('keydown',e=>{const now=performance.now()/1000;
+    if(e.code=='Space'){paused=!paused;if(!paused)t0=now-tp;}
+    if(e.code=='ArrowRight'){tp+=1;t0-=1;}if(e.code=='ArrowLeft'){tp=Math.max(0,tp-1);t0+=1;}});
+  (function loop(){const now=performance.now()/1000;if(!paused)tp=(now-t0)%window.DURATION;render(tp);
+    $('#hud').textContent=`ролик ${REEL} · ${tp.toFixed(2)}s · исходник ${srcTime(tp)[1].toFixed(2)}s`+(paused?' · пауза':'');requestAnimationFrame(loop);})();
+}else{$('#hud').remove();}
+</script>
+</body>
+</html>

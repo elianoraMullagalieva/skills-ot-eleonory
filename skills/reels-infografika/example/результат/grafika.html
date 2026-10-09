@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>ИИ-продавец — графика</title>
+<style>
+@font-face{font-family:M;src:url(../../fonts/Manrope-Light.ttf);font-weight:300}
+@font-face{font-family:M;src:url(../../fonts/Manrope-ExtraBold.ttf);font-weight:800}
+@font-face{font-family:JB;src:url(../../fonts/JetBrainsMono-Regular.ttf)}
+:root{
+  /* 3 размера текста — только они */
+  --t-hero:150px; --t-mid:64px; --t-cap:40px;
+  /* палитра сайта НейроПрактикума */
+  --bg:#070707; --ink:#fff; --mut:#8d8d88; --line:rgba(255,255,255,.22); --red:#e73b23; --card:#121212;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;overflow:hidden;font-family:M,sans-serif;color:#fff}
+#stage{position:relative;width:1080px;height:1040px;overflow:hidden;background:var(--bg);transform-origin:0 0}
+.grain{position:absolute;inset:-60px;pointer-events:none;opacity:.2;mix-blend-mode:screen;z-index:60;
+  background-image:url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");background-size:160px}
+.glow{position:absolute;width:1000px;height:1000px;left:40px;top:20px;border-radius:50%;z-index:0;
+  background:radial-gradient(circle,rgba(255,255,255,.09),rgba(255,255,255,0) 58%)}
+.deco{position:absolute;z-index:40;opacity:0}
+.mono{font-family:JB,monospace;font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);white-space:nowrap}
+.cross{width:28px;height:28px}
+.cross::before,.cross::after{content:"";position:absolute;background:#fff;opacity:.7}
+.cross::before{left:13.5px;top:0;width:1px;height:28px}.cross::after{top:13.5px;left:0;height:1px;width:28px}
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden;z-index:10}
+.hero{font-weight:800;font-size:var(--t-hero);letter-spacing:-.065em;line-height:.92;white-space:nowrap}
+.mid{font-weight:300;font-size:var(--t-mid);letter-spacing:-.045em;line-height:1;white-space:nowrap}
+.cap{font-weight:300;font-size:var(--t-cap);letter-spacing:-.02em;line-height:1.1;color:var(--mut);white-space:nowrap}
+.b{font-weight:800}
+.red{color:var(--red)}
+.w{color:#fff}
+.a{position:absolute}
+.cx{position:absolute;left:0;right:0;text-align:center}
+.tab{font-variant-numeric:tabular-nums}
+svg{overflow:visible}
+.st{fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.st.r{stroke:var(--red)}
+.card{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:28px}
+.sk{position:absolute;height:14px;border-radius:7px;background:rgba(255,255,255,.16)}
+.dot{position:absolute;border-radius:50%}
+.pill{position:absolute;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center}
+#hud{position:fixed;left:8px;bottom:8px;font:14px JB,monospace;color:#888;z-index:99}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="glow" id="glow"></div>
+  <div class="deco mono" id="dtl" style="left:64px;top:58px">нейро<span style="color:#fff">практикум</span></div>
+  <div class="deco mono" id="dtr" style="right:64px;top:58px">ии-продавец</div>
+  <div class="deco cross" id="dbl" style="left:50px;bottom:48px"></div>
+  <div class="deco cross" id="dbr" style="right:50px;bottom:48px"></div>
+  <div class="deco mono tab" id="dnum" style="left:0;right:0;bottom:52px;text-align:center">[ 01 / 27 ]</div>
+  <div class="grain" id="grain"></div>
+</div>
+<div id="hud"></div>
+<script>
+/* ====== движок: всё — чистая функция от времени t (сек) → точная синхронизация с роликом ====== */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const cl=x=>x<0?0:x>1?1:x, L=(a,b,p)=>a+(b-a)*p;
+const EZ={expo:t=>t>=1?1:1-Math.pow(2,-10*t),out:t=>1-Math.pow(1-t,3),
+  back:t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)},io:t=>-(Math.cos(Math.PI*t)-1)/2,lin:t=>t};
+const P=(t,a,d=.4,e='expo')=>EZ[e](cl((t-a)/d));
+const R=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+function T(el,{x=0,y=0,s=1,r=0,o}={}){if(!el)return;el.style.transform=`translate(${x}px,${y}px) rotate(${r}deg) scale(${s})`;if(o!==undefined)el.style.opacity=o;}
+function IN(el,t,a,{dx=0,dy=36,d=.4,s0=1,e='expo',out=null}={}){
+  let p=P(t,a,d,e), o=cl((t-a)/(d*.6));
+  if(out!==null){const q=P(t,out,.3,'out');o*=1-q;T(el,{x:dx*(1-p),y:dy*(1-p)-30*q,s:L(s0,1,p),o});return p;}
+  T(el,{x:dx*(1-p),y:dy*(1-p),s:L(s0,1,p),o});return p;}
+function DRAW(el,p){el.style.strokeDasharray='1 1';el.style.strokeDashoffset=1-p;el.style.opacity=p>0.001?1:0;}
+const typed=(s,t,a,per=.045)=>s.slice(0,Math.max(0,Math.floor((t-a)/per)));
+const PERSON=(w=70,cls='st')=>`<svg width="${w}" height="${w*80/70}" viewBox="0 0 70 80"><circle class="${cls}" cx="35" cy="24" r="16"/><path class="${cls}" d="M5 78 C5 52 65 52 65 78"/></svg>`;
+const ROBOT=(w=120)=>`<svg width="${w}" height="${w}" viewBox="0 0 120 120"><line class="st" x1="60" y1="8" x2="60" y2="28"/><circle cx="60" cy="8" r="6" fill="#fff" class="ant"/><rect class="st" x="14" y="28" width="92" height="76" rx="22"/><circle class="eye" cx="42" cy="64" r="8" fill="#fff"/><circle class="eye" cx="78" cy="64" r="8" fill="#fff"/><line class="st" x1="46" y1="88" x2="74" y2="88"/></svg>`;
+const BRAIN=`<path class="st bp" pathLength="1" d="M300 120 C240 60 150 80 140 150 C80 160 60 240 100 280 C70 330 110 400 170 400 C200 450 270 450 300 410 C330 450 400 450 430 400 C490 400 530 330 500 280 C540 240 520 160 460 150 C450 80 360 60 300 120 Z"/>
+<path class="st bp" pathLength="1" d="M300 120 L300 410"/><path class="st bp" pathLength="1" d="M180 200 C225 190 235 240 200 262"/><path class="st bp" pathLength="1" d="M420 200 C375 190 365 240 400 262"/><path class="st bp" pathLength="1" d="M160 322 C200 300 240 330 230 362"/><path class="st bp" pathLength="1" d="M440 322 C400 300 360 330 370 362"/>`;
+
+const SC=[];
+function S(a,b,html,draw){const el=document.createElement('section');el.className='scene';el.innerHTML=html;
+  $('#stage').insertBefore(el,$('#grain'));SC.push({a,b,el,draw,q:s=>$(s,el),qa:s=>$$(s,el)});}
+
+/* ================= СЦЕНЫ (секунды = тайминг речи в ролике) ================= */
+
+// 00a · 0.0 «Шок-контент, друзья!»
+S(0.0,1.8,`<svg class="a" style="left:0;top:0" width="1080" height="1040">${Array.from({length:14},(_,i)=>{const a=i*Math.PI/7+.1;return `<path class="st rz${i==3?' r':''}" pathLength="1" style="stroke-width:${i%2?2:4}" d="M${540+250*Math.cos(a)} ${430+250*Math.sin(a)} L${540+470*Math.cos(a)} ${430+470*Math.sin(a)}"/>`}).join('')}</svg>
+<div class="cx hero" id="c1" style="top:270px;font-size:150px">шок<span class="red">!</span></div>
+<div class="cx mid" id="c2" style="top:440px">контент</div>
+<div class="cx cap" id="c3" style="top:560px">друзья</div>`,
+(t,q,qa)=>{const p=P(t,0.02,.35,'back');T(q('#c1'),{s:L(1.8,1,p)*(1+.02*Math.sin(t*14)),o:cl(t/.12)});
+  qa('.rz').forEach((r,i)=>{DRAW(r,P(t,.08+i*.02,.45,'out'));r.style.opacity=(1-P(t,.9,.6))*(t>.08?1:0);});
+  IN(q('#c2'),t,0.55);IN(q('#c3'),t,1.3,{dy:15});});
+
+// 00b · 1.8 «Вчера я навайбкодила себе…»
+S(1.8,3.15,`<div class="card" id="tw" style="left:150px;top:140px;width:780px;height:400px;background:#0d0d0d;border-radius:24px">
+<div class="a" style="left:28px;top:26px;display:flex;gap:12px">${[0,1,2].map(i=>`<i style="width:16px;height:16px;border-radius:50%;background:${i?'#333':'#e73b23'};display:block"></i>`).join('')}</div>
+<div class="a mono" style="right:30px;top:24px">claude code</div>
+<div class="a" style="left:0;right:0;top:66px;height:1px;background:var(--line)"></div>
+${['› сделай мне продавца','  читаю диалоги…','  пишу скрипт продаж…','  ✓ готово'].map((l,i)=>`<div class="a tl" data-s="${l}" style="left:44px;top:${100+i*64}px;font:28px JB,monospace;color:${i==0?'#fff':i==3?'#e73b23':'#8d8d88'};white-space:pre"></div>`).join('')}</div>
+<div class="cx mid" id="c1" style="top:620px">вчера я <span class="b">навайбкодила</span></div>`,
+(t,q,qa)=>{IN(q('#tw'),t,1.8,{dy:40,s0:.95});const st=[1.95,2.45,2.7,2.95];
+  qa('.tl').forEach((l,i)=>{l.textContent=typed(l.dataset.s,t,st[i],i?.012:.022);});
+  IN(q('#c1'),t,2.3);});
+
+// 00c · 3.15 «…себе ИИ-продавца»
+S(3.15,5.2,`<div class="a" id="av" style="left:430px;top:110px;width:220px;height:220px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center">${ROBOT(130).replace(/#fff/g,'#070707').replace(/class="st"/g,'class="st rb" style="stroke:#070707"')}</div>
+<svg class="a" style="left:410px;top:90px" width="260" height="260" viewBox="0 0 260 260"><circle id="ring" class="st r" pathLength="1" style="stroke-width:6" cx="130" cy="130" r="126"/></svg>
+${Array.from({length:18},(_,i)=>`<div class="a mono cg" style="left:0;top:0;color:#fff">${['{','}','<','/>','()','=>',';','[]','ai'][i%9]}</div>`).join('')}
+<div class="cx hero" id="c1" style="top:420px;font-size:136px">ИИ-продавец</div>
+<div class="cx mono" id="c2" style="top:620px">статус · онлайн <span class="dot" id="od" style="position:relative;display:inline-block;width:14px;height:14px;background:#e73b23;margin-left:10px"></span></div>`,
+(t,q,qa)=>{qa('.cg').forEach((c,i)=>{const a=R(i)*Math.PI*2,r=380+R(i+7)*200,p=P(t,3.2+R(i+3)*.25,.55,'io');
+    T(c,{x:540+Math.cos(a)*r*(1-p)-12,y:220+Math.sin(a)*r*(1-p)-12,r:(1-p)*200,s:1+(1-p),o:cl((t-3.15)/.2)*(1-P(t,3.7,.15))});});
+  IN(q('#av'),t,3.7,{dy:0,s0:.3,e:'back'});DRAW(q('#ring'),P(t,3.85,.6,'out'));
+  IN(q('#c1'),t,3.85,{dy:50});IN(q('#c2'),t,4.3,{dy:10});T(q('#od'),{s:1+.35*Math.abs(Math.sin(t*4))});
+  T(q('#av'),{s:P(t,3.7,.45,'back')*(1+.02*Math.sin(t*5)),o:cl((t-3.7)/.15)});});
+
+// 00d · 5.2 «который уже к утру»
+S(5.2,6.5,`<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="hz" class="st" pathLength="1" style="stroke-width:2;stroke:var(--line)" d="M140 470 L940 470"/>
+<g id="moon"><path d="M-40 -60 A70 70 0 1 0 40 50 A56 56 0 1 1 -40 -60Z" fill="#fff"/></g>
+<g id="sun"><circle r="58" fill="#e73b23"/>${Array.from({length:10},(_,i)=>{const a=i*Math.PI/5;return `<line class="st r sr" style="stroke-width:5" x1="${84*Math.cos(a)}" y1="${84*Math.sin(a)}" x2="${112*Math.cos(a)}" y2="${112*Math.sin(a)}"/>`}).join('')}</g></svg>
+<div class="cx hero tab" id="clk" style="top:540px">23:00</div>
+<div class="cx cap" id="c1" style="top:720px">уже к утру</div>`,
+(t,q)=>{DRAW(q('#hz'),P(t,5.2,.4,'out'));const p=P(t,5.25,1.0,'io');
+  const mx=L(330,160,p),my=L(250,560,p);q('#moon').setAttribute('transform',`translate(${mx} ${my})`);
+  const sx=L(920,720,p),sy=L(580,250,p);q('#sun').setAttribute('transform',`translate(${sx} ${sy}) rotate(${t*60})`);
+  const mins=23*60+Math.round(8*60*p);const h=Math.floor(mins/60)%24,m=Math.floor(mins%60/10)*10;
+  q('#clk').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');IN(q('#clk'),t,5.2,{dy:30});IN(q('#c1'),t,5.6);});
+
+// 00e · 6.5 «закрыл первую сделку без меня»
+S(6.5,8.65,`<div class="card" id="dl" style="left:150px;top:150px;width:780px;height:220px;background:#151515">
+<div class="a" style="left:40px;top:50px;width:120px;height:120px;border-radius:30px;background:#e73b23;display:flex;align-items:center;justify-content:center">
+<svg width="60" height="60" viewBox="0 0 50 50"><path id="ck" class="st" pathLength="1" style="stroke-width:6" d="M8 26 L20 38 L42 12"/></svg></div>
+<div class="a mono" style="left:196px;top:58px">сделка #001</div>
+<div class="a mid b" style="left:192px;top:100px">закрыта</div>
+<div class="a mono" style="right:40px;top:58px">07:00</div></div>
+<div class="cx mid" id="c0" style="top:490px">первая <span class="b">сделка</span></div>
+<div class="a" id="me" style="left:480px;top:450px;width:120px;height:120px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">${PERSON(56)}</div>
+<svg class="a" style="left:460px;top:430px" width="160" height="160" viewBox="0 0 160 160"><path id="xs" class="st r" pathLength="1" style="stroke-width:8" d="M20 20 L140 140"/></svg>
+<div class="cx hero" id="c1" style="top:620px">без меня</div>`,
+(t,q)=>{IN(q('#dl'),t,6.5,{dy:-80,e:'back',d:.5});DRAW(q('#ck'),P(t,6.85,.35,'out'));
+  IN(q('#c0'),t,6.9,{out:7.6});IN(q('#me'),t,7.65,{s0:.5,dy:0,e:'back'});DRAW(q('#xs'),P(t,7.9,.3,'out'));
+  IN(q('#c1'),t,7.75,{dy:50});});
+
+
+// 01 · 8.7 «Как это получилось?»
+S(8.7,10.25,`<div class="cx mid" id="c1" style="top:235px">как это</div>
+<div class="cx hero" id="c2" style="top:320px">получилось</div>
+<svg class="a" id="qm" style="left:440px;top:545px" width="200" height="300" viewBox="0 0 200 300">
+<path class="st r" pathLength="1" style="stroke-width:16" d="M44 86 C44 22 156 22 156 86 C156 136 100 134 100 190 L100 206"/><circle id="qd" cx="100" cy="262" r="13" fill="#e73b23"/></svg>`,
+(t,q)=>{IN(q('#c1'),t,8.72);IN(q('#c2'),t,9.35,{dy:60});DRAW(q('#qm path'),P(t,9.5,.55,'out'));
+  q('#qd').style.transform=`scale(${P(t,9.95,.3,'back')})`;q('#qd').style.transformOrigin='100px 262px';
+  T(q('#qm'),{r:Math.sin(t*5)*4,o:1});});
+
+// 02 · 10.3 «загрузила свой мозг»
+S(10.3,12.2,`<svg class="a" id="br" style="left:240px;top:110px" width="600" height="500" viewBox="0 0 600 500">${BRAIN}</svg>
+${Array.from({length:14},(_,i)=>`<div class="dot up" style="width:10px;height:10px;background:${i%5==0?'#e73b23':'#fff'}"></div>`).join('')}
+<div class="a" style="left:240px;top:700px;width:600px;height:6px;background:var(--line);border-radius:3px"><div id="bar" style="height:100%;width:0;background:#fff;border-radius:3px"></div></div>
+<div class="a mono tab" id="pct" style="left:240px;top:650px">загрузка 0%</div>
+<div class="cx mid" id="c1" style="top:790px">загрузила свой <span class="b">мозг</span></div>`,
+(t,q,qa)=>{qa('.bp').forEach((p,i)=>DRAW(p,P(t,10.35+i*.12,.8,'out')));
+  const p=P(t,10.7,1.35,'io');q('#bar').style.width=p*100+'%';q('#pct').textContent='загрузка '+Math.round(p*100)+'%';
+  q('#pct').style.opacity=cl((t-10.5)/.3);
+  T(q('#br'),{s:1+.02*Math.sin(t*6),o:1});
+  qa('.up').forEach((d,i)=>{const ph=(t*1.1+R(i))%1;const on=t>10.7;
+    T(d,{x:300+R(i+9)*480,y:L(690,300,EZ.out(ph)),o:on?Math.sin(Math.PI*ph)*.9:0});});
+  IN(q('#c1'),t,10.72);});
+
+// 03 · 12.2 «в два профиля — личный и рабочий»
+S(12.2,14.6,`<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="l1" class="st" pathLength="1" style="stroke-dasharray:1 1;stroke-width:2" d="M540 330 C540 420 300 380 300 470"/><path id="l2" class="st" pathLength="1" style="stroke-width:2" d="M540 330 C540 420 780 380 780 470"/></svg>
+<svg class="a" id="br" style="left:420px;top:110px" width="240" height="200" viewBox="0 0 600 500">${BRAIN}</svg>
+${[['личный',110],['рабочий',590]].map(([n,x],i)=>`<div class="card cd${i}" style="left:${x}px;top:470px;width:380px;height:400px">
+<div class="a" style="left:40px;top:40px;width:110px;height:110px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">${PERSON(56)}</div>
+<div class="a mono" style="right:36px;top:48px">0${i+1}</div>
+<div class="a mid b" style="left:40px;top:190px">${n}</div>
+<div class="sk" style="left:40px;top:290px;width:260px"></div><div class="sk" style="left:40px;top:322px;width:190px"></div>
+<div class="dot" style="left:300px;top:320px;width:22px;height:22px;background:${i?'#e73b23':'#fff'}"></div></div>`).join('')}
+<div class="dot pk" style="width:12px;height:12px;background:#e73b23;left:-6px;top:-6px"></div><div class="dot pk" style="width:12px;height:12px;background:#e73b23;left:-6px;top:-6px"></div>`,
+(t,q,qa)=>{qa('.bp').forEach(p=>DRAW(p,1));T(q('#br'),{s:L(1.6,1,P(t,12.2,.5)),y:1*Math.sin(t*3)*4,o:1});
+  const p1=P(t,12.55,.5,'out'),p2=P(t,13.35,.5,'out');DRAW(q('#l1'),p1);DRAW(q('#l2'),p2);
+  IN(q('.cd0'),t,13.05,{dx:-60,dy:0});IN(q('.cd1'),t,13.7,{dx:60,dy:0});
+  [q('#l1'),q('#l2')].forEach((l,i)=>{const pk=qa('.pk')[i],ph=(t*.9+i*.5)%1,len=l.getTotalLength(),pt=l.getPointAtLength(len*ph);
+    T(pk,{x:pt.x,y:pt.y,o:(i?p2:p1)>=1?Math.sin(Math.PI*ph):0});});});
+
+// 04 · 14.7 «порядка 20 тысяч диалогов»
+S(14.7,17.25,`${Array.from({length:30},(_,i)=>{const w=90+R(i)*110;return `<div class="bub a" style="width:${w}px;height:48px;border-radius:24px 24px 24px 6px;border:1px solid ${i==7||i==19?'#e73b23':'rgba(255,255,255,.25)'};background:rgba(255,255,255,.03)"></div>`}).join('')}
+<div class="a" style="left:190px;top:280px;width:700px;height:420px;background:radial-gradient(closest-side,#070707 55%,rgba(7,7,7,0))"></div>
+<div class="cx cap" id="c0" style="top:300px">порядка</div>
+<div class="cx hero tab" id="num" style="top:370px">0</div>
+<div class="cx mid" id="c1" style="top:560px">диалогов</div>`,
+(t,q,qa)=>{qa('.bub').forEach((b,i)=>{let x=40+R(i+3)*880,y=150+R(i+40)*720;if(y>300&&y<680&&x>170&&x<800)x=x<485?x-230:x+230;
+    const a=14.8+R(i+77)*1.6,p=P(t,a,.35,'back');T(b,{x,y:y-(t-14.7)*18,s:p,o:cl((t-a)/.2)*.9});});
+  IN(q('#c0'),t,14.85);IN(q('#num'),t,15.2,{s0:.85});
+  q('#num').textContent=(Math.round(20000*P(t,15.3,1.2,'expo')/10)*10).toLocaleString('ru-RU');
+  IN(q('#c1'),t,16.4);});
+
+// 05 · 17.3 «с живыми людьми, кто проходил у меня»
+S(17.3,19.35,`${Array.from({length:27},(_,i)=>`<div class="a ppl" style="left:${135+(i%9)*100}px;top:${170+Math.floor(i/9)*120}px">${PERSON(64,i==12?'st r':'st')}</div>`).join('')}
+<div class="cx mid" id="c1" style="top:600px">с <span class="b">живыми</span> людьми</div>
+<div class="cx cap" id="c2" style="top:700px">кто проходил у меня</div>`,
+(t,q,qa)=>{qa('.ppl').forEach((p,i)=>{const c=i%9-4,r=Math.floor(i/9)-1,d=Math.hypot(c,r);const a=17.35+d*.12;
+    const pp=P(t,a,.4,'back');T(p,{y:(1-pp)*30+Math.sin(t*3+i)*3,s:L(.6,1,pp),o:cl((t-a)/.25)*(t>a+.5||i==12?1:.35+.65*cl((t-a)/.5))});});
+  IN(q('#c1'),t,17.35);IN(q('#c2'),t,18.3);});
+
+// 06 · 19.4 «мастер-классы, вебинары, открытые обучалки» — строки как на сайте
+S(19.35,22.45,`<div class="a mono" id="eb" style="left:100px;top:190px">где мы общались</div>
+<div class="a ln" style="left:100px;top:260px;width:880px;height:1px;background:var(--line);transform-origin:0 0"></div>
+${['мастер-классы','вебинары','открытые обучалки'].map((n,i)=>`<div class="a row r${i}" style="left:100px;top:${260+i*170}px;width:880px;height:170px">
+<div class="pill mono" style="left:0;top:53px;letter-spacing:0">0${i+1}</div>
+<div class="a mid nm" style="left:104px;top:52px">${n}</div>
+<svg class="a pl" style="right:6px;top:65px" width="40" height="40" viewBox="0 0 40 40"><path class="st" d="M20 4 V36 M4 20 H36"/></svg></div>
+<div class="a ln" style="left:100px;top:${430+i*170}px;width:880px;height:1px;background:var(--line);transform-origin:0 0"></div>`).join('')}`,
+(t,q,qa)=>{const at=[19.4,20.3,21.1];IN(q('#eb'),t,19.4,{dy:10});
+  qa('.ln').forEach((l,i)=>{l.style.transform=`scaleX(${P(t,19.4+(i?at[i-1]-19.4:0),.6,'out')})`;});
+  qa('.row').forEach((r,i)=>{IN(r,t,at[i],{dx:-40,dy:0});const act=(t>=at[i]&&(i==2||t<at[i+1]));
+    r.querySelector('.nm').style.color=act?'#fff':'#6c6c68';r.querySelector('.nm').style.fontWeight=act?800:300;
+    const pl=r.querySelector('.pl'),pp=P(t,at[i]+.15,.4,'back');pl.style.transform=`rotate(${act?pp*135:135}deg)`;pl.style.transformOrigin='20px 20px';
+    pl.querySelector('path').style.stroke=act?'#e73b23':'#6c6c68';});});
+
+// 07 · 22.5 «но никому из них нельзя писать через бота»
+S(22.5,25.05,`<div class="a" id="rb" style="left:390px;top:120px">${ROBOT(300)}</div>
+<div class="a" id="bb" style="left:700px;top:130px;width:190px;height:80px;border-radius:40px 40px 40px 8px;border:1px solid var(--line);background:#141414">
+${[0,1,2].map(i=>`<div class="dot td" style="width:14px;height:14px;background:#fff;left:${52+i*34}px;top:33px"></div>`).join('')}</div>
+<svg class="a" style="left:340px;top:75px" width="400" height="400" viewBox="0 0 400 400"><circle id="ban" class="st r" pathLength="1" style="stroke-width:16" cx="200" cy="200" r="185"/><path id="sl" class="st r" pathLength="1" style="stroke-width:16" d="M70 70 L330 330"/></svg>
+<div class="cx mid" id="c0" style="top:560px">никому из них</div>
+<div class="cx hero" id="c1" style="top:530px">нельзя</div>
+<div class="cx cap" id="c2" style="top:720px">писать через бота</div>`,
+(t,q,qa)=>{IN(q('#rb'),t,22.5,{s0:.8});const sh=t>23.8?Math.sin(t*60)*10*Math.max(0,1-(t-23.8)/.5):0;
+  T(q('#rb'),{x:sh,s:L(.8,1,P(t,22.5,.4)),o:cl((t-22.5)/.3)*(t>24?0.55:1)});
+  qa('.eye').forEach(e=>{e.style.transform=`scaleY(${(t%1.3)<.1?.15:1})`;e.style.transformBox='fill-box';e.style.transformOrigin='center';});
+  const bo=t<23.8?P(t,22.7,.35,'back'):1;const fall=P(t,23.85,.5,'out');
+  T(q('#bb'),{s:bo,y:fall*300,r:fall*35,o:cl((t-22.7)/.2)*(1-fall)});
+  qa('.td').forEach((d,i)=>T(d,{y:Math.sin(t*9-i)*6}));
+  DRAW(q('#ban'),P(t,23.8,.4,'out'));DRAW(q('#sl'),P(t,24.05,.25,'out'));
+  IN(q('#c0'),t,22.9,{out:23.7});IN(q('#c1'),t,23.8,{s0:1.15,dy:0});IN(q('#c2'),t,24.1);});
+
+// 08 · 25.1 «я взяла 100 человек»
+S(25.1,27.45,`<div class="a mid" id="c0" style="left:110px;top:270px">я взяла</div>
+<div class="a hero tab" id="num" style="left:100px;top:345px">0</div>
+<div class="a cap" id="c1" style="left:112px;top:505px">человек</div>
+${Array.from({length:100},(_,i)=>`<div class="dot g" style="left:${560+(i%10)*42}px;top:0px;width:22px;height:22px"></div>`).join('')}`,
+(t,q,qa)=>{IN(q('#c0'),t,25.2);IN(q('#num'),t,26.2,{dy:50});IN(q('#c1'),t,26.8);
+  let n=0;qa('.g').forEach((d,i)=>{d.style.top=(230+Math.floor(i/10)*42)+'px';const a=26.3+R(i+5)*.95,on=t>=a;if(on)n++;
+    d.style.background=on?(i==44?'#e73b23':'#fff'):'rgba(255,255,255,.14)';T(d,{s:on?L(1.5,1,P(t,a,.3)):.7,o:cl((t-25.15-(i%10)*.02)/.3)});});
+  q('#num').textContent=t<26.3?'0':n;});
+
+// 09 · 27.45 «написала лично»
+S(27.45,28.6,`<div class="card" id="cw" style="left:170px;top:160px;width:740px;height:420px">
+<div class="a" style="left:36px;top:30px;width:64px;height:64px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center">${PERSON(32)}</div>
+<div class="a mono" style="left:120px;top:50px">личное сообщение</div>
+<div class="a" style="left:0;right:0;top:120px;height:1px;background:var(--line)"></div>
+<div class="a" id="msg" style="right:36px;top:160px;padding:22px 30px;border-radius:30px 30px 8px 30px;background:#fff;color:#070707"><span class="cap b" style="color:#070707">Привет! Это Эли</span></div>
+<div class="a" style="left:28px;right:28px;bottom:28px;height:96px;border:1px solid var(--line);border-radius:48px"></div>
+<div class="a cap w" id="inp" style="left:66px;bottom:52px">|</div>
+<div class="a" id="snd" style="right:40px;bottom:40px;width:72px;height:72px;border-radius:50%;background:#e73b23;display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 30 30"><path class="st" style="stroke-width:3.5" d="M15 26 V5 M6 13 L15 4 L24 13"/></svg></div></div>
+<div class="cx hero" id="c1" style="top:660px">лично</div>`,
+(t,q)=>{IN(q('#cw'),t,27.45,{dy:40});const s='Привет! Это Эли';const sent=t>=28.15;
+  q('#inp').textContent=sent?'':typed(s,t,27.55,.035)+((t*4|0)%2?'|':'');
+  T(q('#snd'),{s:sent&&t<28.3?.85:1});IN(q('#msg'),t,28.15,{dy:30,s0:.9});q('#msg').style.opacity=sent?cl((t-28.15)/.12):0;
+  IN(q('#c1'),t,27.95,{dy:50});});
+
+// 10 · 28.6 «15 минут потратила»
+S(28.6,30.0,`<svg class="a" style="left:330px;top:130px" width="420" height="420" viewBox="0 0 420 420">
+<circle class="st" style="stroke:var(--line);stroke-width:2" cx="210" cy="210" r="190"/>
+${Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return `<line class="st tk" style="stroke-width:${i%3?2:4};opacity:.6" x1="${210+172*Math.sin(a)}" y1="${210-172*Math.cos(a)}" x2="${210+158*Math.sin(a)}" y2="${210-158*Math.cos(a)}"/>`}).join('')}
+<path id="arc" class="st r" pathLength="1" style="stroke-width:18" d="M210 20 A190 190 0 0 1 400 210"/>
+<line id="hand" class="st" style="stroke-width:4" x1="210" y1="210" x2="210" y2="60"/></svg>
+<div class="cx hero tab" id="num" style="top:275px">0</div>
+<div class="cx mid" id="c1" style="top:620px">минут</div>
+<div class="cx cap" id="c2" style="top:720px">и всё</div>`,
+(t,q)=>{const p=P(t,28.65,.8,'io');DRAW(q('#arc'),p);q('#hand').style.transform=`rotate(${p*90}deg)`;q('#hand').style.transformOrigin='210px 210px';
+  q('#num').textContent=Math.round(15*p);IN(q('#num'),t,28.6,{s0:.8,dy:0});IN(q('#c1'),t,28.9);IN(q('#c2'),t,29.3);});
+
+// 11 · 30.0 «и пошла отдыхать»
+S(30.0,31.2,`<svg class="a" id="cup" style="left:370px;top:130px" width="340" height="420" viewBox="0 0 340 420">
+${[0,1,2].map(i=>`<path class="st stm" pathLength="1" d="M${120+i*50} 150 C${100+i*50} 120 ${140+i*50} 100 ${120+i*50} 70 C${100+i*50} 40 ${140+i*50} 20 ${120+i*50} 0"/>`).join('')}
+<path class="st" pathLength="1" id="cb" style="stroke-width:4" d="M60 190 H280 V300 C280 360 240 390 170 390 C100 390 60 360 60 300 Z"/>
+<path class="st" pathLength="1" id="ch" style="stroke-width:4" d="M280 215 C340 215 340 290 280 290"/>
+<circle cx="170" cy="190" r="0" fill="#e73b23" id="cd"/></svg>
+<div class="cx mid" id="c1" style="top:640px">и пошла <span class="b">отдыхать</span></div>`,
+(t,q,qa)=>{DRAW(q('#cb'),P(t,30.02,.45,'out'));DRAW(q('#ch'),P(t,30.25,.3,'out'));
+  qa('.stm').forEach((s,i)=>{DRAW(s,P(t,30.35+i*.1,.5,'out'));T(s,{y:-((t*40+i*13)%26),o:s.style.opacity});});
+  IN(q('#c1'),t,30.05);});
+
+// 12 · 31.2 «открываю — продажа»
+S(31.2,33.0,`<div class="card" id="n2" style="left:190px;top:170px;width:700px;height:170px;background:#0f0f0f"></div>
+<div class="card" id="n1" style="left:150px;top:150px;width:780px;height:180px;background:#171717">
+<div class="a" style="left:32px;top:40px;width:100px;height:100px;border-radius:26px;background:#e73b23;display:flex;align-items:center;justify-content:center">
+<svg width="50" height="50" viewBox="0 0 50 50"><path id="ck" class="st" pathLength="1" style="stroke-width:6" d="M8 26 L20 38 L42 12"/></svg></div>
+<div class="a cap b w" style="left:164px;top:46px">новая продажа</div>
+<div class="a mono" style="right:34px;top:54px">сейчас</div>
+<div class="sk" style="left:164px;top:112px;width:360px"></div></div>
+<div class="cx mid" id="c0" style="top:450px">открываю —</div>
+<div class="cx hero" id="c1" style="top:540px">продажа<span class="red">.</span></div>`,
+(t,q)=>{const p=P(t,31.25,.55,'back');T(q('#n1'),{y:(1-p)*-330,o:cl((t-31.25)/.2)});
+  T(q('#n2'),{y:(1-P(t,31.4,.55,'back'))*-330+22,s:.97,o:cl((t-31.4)/.2)*.8});
+  DRAW(q('#ck'),P(t,31.7,.35,'out'));IN(q('#c0'),t,31.3);IN(q('#c1'),t,32.05,{s0:1.12,dy:0});});
+
+// 13 · 33.0 «дело не только в интеграциях»
+S(33.0,35.55,`<svg class="a" style="left:0;top:0" width="1080" height="1040">
+${['crm','tg','pay','api','mail','sheets'].map((n,i)=>{const a=-Math.PI/2+i*Math.PI/3,x=540+330*Math.cos(a),y=390+230*Math.sin(a);
+ return `<path class="st lk" pathLength="1" style="stroke-width:2" d="M540 390 L${x} ${y}"/>`}).join('')}</svg>
+<div id="net">
+${['crm','tg','pay','api','mail','sheets'].map((n,i)=>{const a=-Math.PI/2+i*Math.PI/3,x=540+330*Math.cos(a),y=390+230*Math.sin(a);
+ return `<div class="a nd mono w" style="left:${x-70}px;top:${y-42}px;width:140px;height:84px;border:1px solid var(--line);border-radius:22px;background:#111;display:flex;align-items:center;justify-content:center;letter-spacing:.06em">${n}</div>
+ <div class="dot pk" style="width:10px;height:10px;background:#fff;left:-5px;top:-5px" data-x="${x}" data-y="${y}"></div>`}).join('')}
+<div class="a" id="core" style="left:470px;top:320px;width:140px;height:140px;border-radius:50%;background:#fff;color:#070707;display:flex;align-items:center;justify-content:center"><span class="cap b" style="color:#070707">ИИ</span></div></div>
+<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="x" class="st r" pathLength="1" style="stroke-width:10" d="M150 400 L930 380"/></svg>
+<div class="cx mid" id="c1" style="top:760px">не только <span class="b">интеграции</span></div>`,
+(t,q,qa)=>{qa('.lk').forEach((l,i)=>DRAW(l,P(t,33.1+i*.1,.4,'out')));
+  qa('.nd').forEach((n,i)=>IN(n,t,33.05+i*.1,{dy:0,s0:.6,e:'back'}));IN(q('#core'),t,33.0,{dy:0,s0:.5,e:'back'});
+  qa('.pk').forEach((d,i)=>{const ph=(t*1.3+i*.37)%1,x=+d.dataset.x,y=+d.dataset.y;T(d,{x:L(x,540,ph),y:L(y,390,ph),o:t>33.8?Math.sin(Math.PI*ph):0});});
+  const dim=P(t,34.1,.4,'out');q('#net').style.opacity=1-dim*.7;qa('.lk').forEach(l=>{if(dim>0)l.style.opacity=1-dim*.7;});
+  DRAW(q('#x'),P(t,34.15,.35,'out'));IN(q('#c1'),t,34.2);});
+
+// 14 · 35.6 «а в том, какой опыт я ему передала»
+S(35.6,38.65,`<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="ln" class="st" pathLength="1" style="stroke-width:2;stroke:var(--line)" d="M390 330 L690 330"/></svg>
+<div class="a" id="me" style="left:170px;top:210px;width:240px;height:240px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">${PERSON(100)}</div>
+<div class="a" id="ai" style="left:670px;top:210px;width:240px;height:240px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">${ROBOT(120)}</div>
+<div class="a mono" id="l1" style="left:170px;width:240px;text-align:center;top:475px">я</div><div class="a mono" id="l2" style="left:670px;width:240px;text-align:center;top:475px">ии-агент</div>
+${Array.from({length:16},(_,i)=>`<div class="dot fl" style="width:12px;height:12px;left:-6px;top:-6px;background:${i%4?'#fff':'#e73b23'}"></div>`).join('')}
+<div class="cx cap" id="c0" style="top:580px">какой</div>
+<div class="cx hero" id="c1" style="top:630px">опыт</div>
+<div class="a" style="left:290px;top:820px;width:500px;height:6px;background:var(--line);border-radius:3px"><div id="bar" style="height:100%;width:0;background:#e73b23;border-radius:3px"></div></div>`,
+(t,q,qa)=>{IN(q('#me'),t,35.6,{dx:-60,dy:0});IN(q('#ai'),t,35.75,{dx:60,dy:0});IN(q('#l1'),t,35.8,{dy:10});IN(q('#l2'),t,35.9,{dy:10});
+  DRAW(q('#ln'),P(t,35.9,.5,'out'));
+  qa('.fl').forEach((d,i)=>{const ph=(t*.8+i/16)%1;T(d,{x:L(410,670,ph),y:330+Math.sin(ph*Math.PI*2+i)*26*Math.sin(ph*Math.PI),o:t>36.1?Math.sin(Math.PI*ph):0});});
+  T(q('#ai'),{s:1+.035*Math.sin(t*7)*(t>36.8?1:0),o:cl((t-35.75)/.25)});
+  IN(q('#c0'),t,36.7,{dy:20});IN(q('#c1'),t,36.9,{dy:50});q('#bar').style.width=P(t,37.0,1.3,'io')*100+'%';});
+
+// 15 · 38.7 «самые удачные и самые неудачные диалоги моих менеджеров»
+S(38.7,43.75,`<div class="a cap w" id="h1" style="left:120px;top:170px">удачные</div>
+<div class="a cap w" id="h2" style="left:610px;top:170px">неудачные</div>
+${[0,1,2,3,4,5].map(i=>{const g=i<3,x=g?120:610,y=250+(i%3)*140;return `<div class="card dc" style="left:${x}px;top:${y}px;width:350px;height:112px;border-radius:22px" data-x="${x}" data-y="${y}">
+<div class="sk" style="left:30px;top:36px;width:190px"></div><div class="sk" style="left:30px;top:64px;width:130px"></div>
+<div class="a" style="right:26px;top:30px;width:52px;height:52px;border-radius:50%;background:${g?'#fff':'#e73b23'};display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 26 26"><path class="st" style="stroke-width:3.5;stroke:${g?'#070707':'#fff'}" d="${g?'M4 14 L10 20 L22 6':'M6 6 L20 20 M20 6 L6 20'}"/></svg></div></div>`}).join('')}
+<div class="a" id="core" style="left:440px;top:300px;width:200px;height:200px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center">${ROBOT(100).replace(/#fff/g,'#070707').replace(/class="st"/g,'class="st" style="stroke:#070707"')}</div>
+<div class="a" id="rip" style="left:440px;top:300px;width:200px;height:200px;border-radius:50%;border:2px solid #e73b23"></div>
+<div class="cx mid" id="c1" style="top:640px">диалоги <span class="b">менеджеров</span></div>`,
+(t,q,qa)=>{IN(q('#h1'),t,39.5,{dy:15});IN(q('#h2'),t,41.1,{dy:15});
+  const at=[39.0,39.35,39.7,41.05,41.35,41.65];const m=P(t,42.3,.6,'io');
+  qa('.dc').forEach((c,i)=>{const p=P(t,at[i],.45,'back'),g=i<3;const x0=+c.dataset.x,y0=+c.dataset.y;
+    const dx=(1-p)*(g?-500:500),mx=(540-175-x0)*m,my=(400-56-y0)*m;
+    T(c,{x:dx+mx,y:my+Math.sin(t*2+i)*3,r:(1-p)*(g?-8:8),s:1-m*.8,o:cl((t-at[i])/.2)*(1-P(t,42.7,.25))});});
+  T(q('#h1'),{o:(t>39.5?1:0)*(1-m)});T(q('#h2'),{o:(t>41.1?1:0)*(1-m)});
+  IN(q('#core'),t,42.55,{dy:0,s0:.3,e:'back'});const rp=((t-42.8)%0.8)/0.8;
+  T(q('#rip'),{s:1+rp*.6,o:t>42.8?(1-rp)*.8:0});IN(q('#c1'),t,42.6);});
+
+// 16 · 43.8 «а потом и меня, когда пришлось их уволить»
+S(43.8,46.75,`${[170,390,690,910].map((x,i)=>`<div class="a mg" style="left:${x-80}px;top:230px;width:160px;text-align:center">
+<div style="width:160px;height:160px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">${PERSON(70)}</div>
+<div class="mono" style="margin-top:20px">менеджер</div></div>`).join('')}
+<div class="a" id="me" style="left:440px;top:200px;width:200px;text-align:center">
+<div style="width:200px;height:200px;border-radius:50%;border:4px solid #e73b23;display:flex;align-items:center;justify-content:center;background:#111">${PERSON(90)}</div>
+<div class="mono w" style="margin-top:20px">я</div></div>
+<div class="cx mid" id="c1" style="top:600px">а потом — и <span class="b">меня</span></div>
+<div class="cx cap" id="c2" style="top:700px">когда пришлось их уволить</div>`,
+(t,q,qa)=>{qa('.mg').forEach((m,i)=>{const a=43.85+i*.1,p=P(t,a,.4,'back');const f=P(t,46.0+i*.07,.6,'out');const side=i<2?-1:1;
+    T(m,{x:side*(1-P(t,44.4,.4))*-60,y:(1-p)*40+f*f*700,r:f*side*50,s:L(.7,1,p),o:cl((t-a)/.2)*(1-f*.6)});});
+  const pm=P(t,44.4,.5,'back');T(q('#me'),{s:L(.3,1,pm)*(1+.18*P(t,46.1,.5)),o:cl((t-44.4)/.2)});
+  IN(q('#c1'),t,44.0);IN(q('#c2'),t,45.3);});
+
+// 17 · 46.8 «никто не продаёт так виртуозно»
+S(46.8,50.25,`<div class="cx mid" id="c0" style="top:300px">как мы знаем</div>
+<div class="cx mid" id="c1" style="top:300px">никто не продаёт так</div>
+<div class="cx hero" id="c2" style="top:410px">виртуозно</div>
+<svg class="a" style="left:190px;top:580px" width="700" height="120" viewBox="0 0 700 120"><path id="sw" class="st r" pathLength="1" style="stroke-width:10" d="M10 70 C160 20 300 110 430 60 C520 25 600 40 690 30"/></svg>
+${[0,1,2,3,4].map(i=>`<svg class="a sp" style="left:${[150,880,230,830,540][i]}px;top:${[410,380,640,660,220][i]}px" width="40" height="40" viewBox="-20 -20 40 40"><path d="M0 -18 C2 -4 4 -2 18 0 C4 2 2 4 0 18 C-2 4 -4 2 -18 0 C-4 -2 -2 -4 0 -18Z" fill="${i==4?'#e73b23':'#fff'}"/></svg>`).join('')}`,
+(t,q,qa)=>{IN(q('#c0'),t,47.1,{out:48.0});IN(q('#c1'),t,48.2);IN(q('#c2'),t,49.4,{dy:60,s0:.9});
+  DRAW(q('#sw'),P(t,49.6,.5,'out'));
+  qa('.sp').forEach((s,i)=>{const a=49.55+i*.08;T(s,{s:P(t,a,.4,'back')*(1+.2*Math.sin(t*6+i)),r:t*60+i*30,o:cl((t-a)/.2)});});});
+
+// 18 · 50.25 «как собственник»
+S(50.25,51.9,`<div class="a" style="left:130px;top:720px;width:820px;height:2px;background:var(--line)"></div>
+${[['менеджер',180],['бот',110],['собственник',520]].map(([n,h],i)=>`<div class="a br" data-h="${h}" style="left:${170+i*270}px;top:${720-h}px;width:200px;height:${h}px;background:${i==2?'#e73b23':'rgba(255,255,255,.14)'};border-radius:18px 18px 0 0;transform-origin:50% 100%"></div>
+<div class="a cap bl" style="left:${120+i*270}px;width:300px;text-align:center;top:750px;${i==2?'color:#fff;font-weight:800':''}">${n}</div>`).join('')}`,
+(t,q,qa)=>{qa('.br').forEach((b,i)=>{const p=P(t,50.3+i*.12,i==2?.6:.4,'back');b.style.transform=`scaleY(${p})`;b.style.opacity=cl((t-50.3-i*.12)/.1);});
+  qa('.bl').forEach((b,i)=>IN(b,t,50.35+i*.12,{dy:15}));});
+
+// 19 · 51.9 «вложил годы своей жизни в создание продукта»
+S(51.9,54.25,`<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="tl" class="st" pathLength="1" style="stroke-width:2" d="M110 330 L700 330"/>
+${Array.from({length:8},(_,i)=>`<line class="st tk" style="stroke-width:2" x1="${120+i*80}" y1="312" x2="${120+i*80}" y2="348"/>`).join('')}</svg>
+<div class="dot" id="rd" style="width:26px;height:26px;background:#e73b23;left:-13px;top:317px"></div>
+<div class="card" id="bx" style="left:730px;top:262px;width:240px;height:136px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center"><span class="cap b" style="color:#070707">продукт</span></div>
+<div class="cx hero" id="c1" style="top:480px">годы жизни</div>
+<div class="cx cap" id="c2" style="top:660px">в создание продукта</div>`,
+(t,q,qa)=>{const p=P(t,51.95,1.5,'io');DRAW(q('#tl'),p);
+  qa('.tk').forEach((k,i)=>{k.style.opacity=p*590>i*80?1:0;});T(q('#rd'),{x:110+590*p,s:1+.15*Math.sin(t*10),o:cl((t-51.95)/.2)});
+  IN(q('#bx'),t,53.35,{dx:40,dy:0,s0:.8,e:'back'});IN(q('#c1'),t,52.2,{dy:50});IN(q('#c2'),t,53.3);});
+
+// 20 · 54.3 «загрузила свои фирменные фразочки»
+S(54.3,58.0,`${[[120,170],[790,150],[90,420],[830,430],[450,110]].map(([x,y],i)=>`<div class="a qb" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;width:170px;height:110px;border-radius:30px 30px 30px 8px;border:1px solid ${i==1?'#e73b23':'var(--line)'};background:#131313">
+<div class="a mid b" style="left:26px;top:14px;color:${i==1?'#e73b23':'#fff'}">«»</div><div class="sk" style="left:100px;top:34px;width:44px"></div><div class="sk" style="left:100px;top:60px;width:30px"></div></div>`).join('')}
+<div class="a" id="core" style="left:460px;top:250px;width:160px;height:160px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><span class="cap b" style="color:#070707">ИИ</span></div>
+<div class="a" id="rip" style="left:460px;top:250px;width:160px;height:160px;border-radius:50%;border:2px solid #fff"></div>
+<div class="cx mid" id="c0" style="top:560px">свои <span class="b">фирменные</span></div>
+<div class="cx hero" id="c1" style="top:650px">фразочки</div>`,
+(t,q,qa)=>{IN(q('#core'),t,54.4,{dy:0,s0:.4,e:'back'});
+  qa('.qb').forEach((b,i)=>{const a=54.5+i*.15,p=P(t,a,.4,'back'),x=+b.dataset.x,y=+b.dataset.y;
+    const ab=P(t,55.6+i*.12,.45,'io');T(b,{x:(540-85-x)*ab,y:(330-55-y)*ab+Math.sin(t*3+i)*6,s:p*(1-ab*.85),r:Math.sin(t*2+i)*4,o:cl((t-a)/.2)*(1-P(t,55.95+i*.12,.15))});});
+  const rp=((t-55.7)%0.6)/0.6;T(q('#rip'),{s:1+rp*.7,o:t>55.7&&t<56.9?(1-rp)*.7:0});
+  T(q('#core'),{s:(t>55.6?1+.05*Math.sin(t*14):P(t,54.4,.4,'back')),o:cl((t-54.4)/.2)});
+  IN(q('#c0'),t,56.6);IN(q('#c1'),t,57.15,{dy:50});});
+
+// 21 · 58.0 «шуточки»
+S(58.0,59.2,`<div class="cx hero" id="c1" style="top:400px">шуточки</div>
+${[['ха',160,190,-12],['хаха',760,170,10],[')))',120,640,8],['ха-ха',720,660,-8],['хах',470,150,4],['))',880,420,12]].map(([s,x,y,r],i)=>`<div class="a hb" data-r="${r}" style="left:${x}px;top:${y}px;padding:18px 28px;border-radius:32px 32px 32px 8px;background:${i==1?'#e73b23':'#fff'}"><span class="cap b" style="color:${i==1?'#fff':'#070707'}">${s}</span></div>`).join('')}`,
+(t,q,qa)=>{IN(q('#c1'),t,58.0,{s0:.85,dy:0});T(q('#c1'),{s:L(.85,1,P(t,58,.4))*(1+.02*Math.sin(t*9)),o:cl((t-58)/.2)});
+  qa('.hb').forEach((b,i)=>{const a=58.1+i*.12;T(b,{s:P(t,a,.35,'back'),r:+b.dataset.r+Math.sin(t*8+i)*5,y:Math.sin(t*5+i)*6,o:cl((t-a)/.15)});});});
+
+// 22 · 59.2 «живые разговоры»
+S(59.2,60.3,`${Array.from({length:44},(_,i)=>`<div class="a wv" style="left:${144+i*18}px;top:200px;width:9px;height:300px;border-radius:5px;background:${i==22?'#e73b23':'#fff'};transform-origin:50% 50%"></div>`).join('')}
+<div class="cx mid" id="c1" style="top:620px"><span class="b">живые</span> разговоры</div>`,
+(t,q,qa)=>{qa('.wv').forEach((w,i)=>{const env=Math.sin(Math.PI*i/43);const h=.08+env*(.5+.5*Math.abs(Math.sin(t*9+i*.7)*Math.sin(t*4.3+i*.23)));
+    w.style.transform=`scaleY(${h*P(t,59.2+i*.006,.3)})`;w.style.opacity=1;});IN(q('#c1'),t,59.25);});
+
+// 23 · 60.3 «сама не могу отличить его от себя»
+S(60.3,64.45,`${[0,1].map(i=>`<div class="card sc" style="left:${i?590:190}px;top:140px;width:300px;height:380px">
+<div class="a" style="left:95px;top:46px;width:110px;height:110px;border-radius:50%;background:#1d1d1d;display:flex;align-items:center;justify-content:center">${PERSON(54)}</div>
+<div class="sk" style="left:50px;top:200px;width:200px"></div><div class="sk" style="left:75px;top:232px;width:150px"></div>
+<div class="a" style="left:0;right:0;top:290px;text-align:center"><span class="mid b lb" style="color:#fff">${i?'ИИ':'я'}</span><span class="mid b lq red" style="position:absolute;left:0;right:0;opacity:0">?</span></div></div>`).join('')}
+<div class="cx mid" id="c0" style="top:620px">реально получилось</div>
+<div class="cx mid" id="c1" style="top:620px">сама не могу <span class="b">отличить</span></div>`,
+(t,q,qa)=>{const c=qa('.sc');const sw=[[62.0,.5],[62.6,.5],[63.2,.5]];
+  let pos=[0,1];let tr=[0,0];
+  sw.forEach(([a,d])=>{const p=P(t,a,d,'io');if(p>=1)pos=[pos[1],pos[0]];else if(p>0){tr=[p,a];}});
+  c.forEach((el,i)=>{let x0=pos[i]*400;let x=x0,y=0;
+    if(tr[0]>0){const p=tr[0];const to=(1-pos[i])*400;x=L(x0,to,p);y=(pos[i]?1:-1)*Math.sin(Math.PI*p)*90;}
+    IN(el,t,60.35+i*.12,{dy:40});T(el,{x,y:y+(1-P(t,60.35+i*.12,.4))*40,o:cl((t-60.35-i*.12)/.25)});
+    const lq=P(t,61.8,.3);el.querySelector('.lb').style.opacity=1-lq;el.querySelector('.lq').style.opacity=lq;});
+  IN(q('#c0'),t,60.5,{out:61.85});IN(q('#c1'),t,62.1);});
+
+// 24 · 64.6 «хотите проверить?»
+S(64.5,65.65,`<svg class="a" id="mg" style="left:420px;top:130px" width="240" height="240" viewBox="0 0 240 240"><circle class="st" pathLength="1" style="stroke-width:10" cx="100" cy="100" r="70"/><path class="st r" pathLength="1" style="stroke-width:14" d="M152 152 L215 215"/></svg>
+<div class="cx mid" id="c0" style="top:440px">хотите</div>
+<div class="cx hero" id="c1" style="top:530px">проверить<span class="red">?</span></div>`,
+(t,q,qa)=>{qa('#mg .st').forEach((s,i)=>DRAW(s,P(t,64.55+i*.2,.4,'out')));T(q('#mg'),{x:Math.sin(t*5)*50,y:Math.cos(t*5)*14,o:1});
+  IN(q('#c0'),t,64.6);IN(q('#c1'),t,64.95,{dy:50});});
+
+// 25 · 65.7 «пишите "поболтаем"»
+S(65.65,66.95,`<div class="cx cap" id="c0" style="top:230px">пишите слово</div>
+<div class="a" id="fld" style="left:140px;top:320px;width:800px;height:140px;border:1px solid rgba(255,255,255,.5);border-radius:70px">
+<div class="a mid" id="inp" style="left:56px;top:36px">|</div>
+<div class="a" id="snd" style="right:22px;top:22px;width:96px;height:96px;border-radius:50%;background:#e73b23;display:flex;align-items:center;justify-content:center"><svg width="40" height="40" viewBox="0 0 40 40"><path class="st" style="stroke-width:4" d="M8 32 L32 8 M12 8 H32 V28"/></svg></div></div>
+<svg class="a" id="cur" style="left:0;top:0" width="44" height="54" viewBox="0 0 30 40"><path d="M0 0 L0 34 L9 26 L15 40 L21 37 L15 24 L27 24 Z" fill="#fff" stroke="#070707" stroke-width="2"/></svg>`,
+(t,q)=>{IN(q('#c0'),t,65.7);IN(q('#fld'),t,65.7,{s0:.9,dy:20});
+  q('#inp').innerHTML=typed('поболтаем',t,65.85,.05)+(t<66.35&&(t*5|0)%2?'|':'')+(t>66.3?'':'');
+  if(t>66.3)q('#inp').innerHTML='<span class="b">поболтаем</span>';
+  const cp=P(t,66.1,.4,'io');T(q('#cur'),{x:L(700,860,cp),y:L(620,400,cp),o:cl((t-65.9)/.2)});
+  T(q('#snd'),{s:t>66.5&&t<66.65?.85:1});});
+
+// 26 · 67.0 «я вам скину моего ИИ-агента»
+S(66.95,69.75,`<svg class="a" style="left:0;top:0" width="1080" height="1040"><path id="fp" class="st" pathLength="1" style="stroke-width:3;stroke-dasharray:.012 .012;opacity:.5" d="M120 760 C260 560 420 760 560 600 C680 460 780 520 930 300"/></svg>
+<svg class="a" id="pl" style="left:0;top:0" width="80" height="60" viewBox="0 0 60 44"><path d="M0 0 L60 22 L0 44 L10 22 Z" fill="#fff"/><path d="M10 22 L60 22" stroke="#070707" stroke-width="2"/></svg>
+<div class="cx mid" id="c0" style="top:150px">скину вам моего</div>
+<div class="card" id="ag" style="left:170px;top:380px;width:740px;height:220px;background:#151515">
+<div class="a" style="left:40px;top:40px;width:140px;height:140px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center">${ROBOT(84).replace(/#fff/g,'#070707').replace(/class="st"/g,'class="st" style="stroke:#070707"')}</div>
+<div class="a mid b" style="left:214px;top:56px">ИИ-агента</div>
+<div class="a mono" style="left:218px;top:140px">онлайн<span class="dot on" style="position:relative;display:inline-block;width:12px;height:12px;margin-left:14px;background:#e73b23;top:-1px"></span></div>
+<div class="a" style="right:40px;top:78px;width:64px;height:64px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 26 26"><path class="st" d="M5 21 L21 5 M8 5 H21 V18"/></svg></div></div>`,
+(t,q)=>{IN(q('#c0'),t,67.0);const fp=q('#fp');const p=P(t,67.25,1.1,'io');const len=fp.getTotalLength();
+  const a=fp.getPointAtLength(len*p),b=fp.getPointAtLength(Math.min(len,len*p+2));const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+  T(q('#pl'),{x:a.x-40,y:a.y-30,r:ang,o:cl((t-67.25)/.2)*(1-P(t,68.35,.25))});fp.style.opacity=.5*(1-P(t,68.4,.3));
+  IN(q('#ag'),t,68.35,{dy:40,s0:.9,e:'back'});T(q('#ag .on'),{s:1+.3*Math.abs(Math.sin(t*4))});});
+
+// 27 · 69.8 «поделитесь: отличите вы его от меня или нет»
+S(69.8,74.0,`<div class="cx mid" id="c0" style="top:260px">поделитесь</div>
+<div class="cx hero" id="c1" style="top:230px">отличите<span class="red">?</span></div>
+<div class="a bt" id="b1" style="left:130px;top:520px;width:390px;height:130px;background:#fff;color:#070707;display:flex;align-items:center;justify-content:space-between;padding:0 40px">
+<span class="cap b" style="color:#070707">это ИИ</span><svg width="30" height="30" viewBox="0 0 26 26"><path class="st" style="stroke:#070707" d="M5 21 L21 5 M8 5 H21 V18"/></svg></div>
+<div class="a bt" id="b2" style="left:560px;top:520px;width:390px;height:130px;border:1px solid #fff;display:flex;align-items:center;justify-content:space-between;padding:0 40px">
+<span class="cap b w">это Эли</span><svg width="30" height="30" viewBox="0 0 26 26"><path class="st" d="M5 21 L21 5 M8 5 H21 V18"/></svg></div>
+<svg class="a" id="cur" style="left:0;top:0" width="44" height="54" viewBox="0 0 30 40"><path d="M0 0 L0 34 L9 26 L15 40 L21 37 L15 24 L27 24 Z" fill="#fff" stroke="#070707" stroke-width="2"/></svg>`,
+(t,q)=>{IN(q('#c0'),t,70.2,{out:71.1});IN(q('#c1'),t,71.25,{dy:50});
+  IN(q('#b1'),t,71.5,{dy:40});IN(q('#b2'),t,71.62,{dy:40});
+  const k=[[71.9,540,900],[72.3,330,600],[72.8,760,600],[73.25,540,610],[74,540,610]];
+  let cx=540,cy=900;for(let i=1;i<k.length;i++){if(t<k[i][0]){const p=EZ.io(cl((t-k[i-1][0])/(k[i][0]-k[i-1][0])));cx=L(k[i-1][1],k[i][1],p);cy=L(k[i-1][2],k[i][2],p);break;}}
+  T(q('#cur'),{x:cx,y:cy,o:cl((t-71.9)/.2)});
+  const h1=cx<520&&cy<660&&t>72,h2=cx>560&&cy<660&&t>72;
+  q('#b1').style.outline=h1?'4px solid #e73b23':'none';q('#b1').style.outlineOffset='6px';
+  q('#b2').style.outline=h2?'4px solid #e73b23':'none';q('#b2').style.outlineOffset='6px';});
+
+/* ================= РЕНДЕР ================= */
+const DECO=['#dtl','#dtr','#dbl','#dbr','#dnum'];
+function render(t){
+  const on=true;DECO.forEach(d=>$(d).style.opacity=cl(t/.4));
+  let idx=0;
+  SC.forEach((s,i)=>{const vis=t>=s.a&&t<s.b+.15;s.el.style.visibility=vis?'visible':'hidden';
+    if(t>=s.a)idx=i;
+    if(!vis)return;const out=cl((t-s.b)/.15);s.el.style.opacity=1-out;
+    s.el.style.transform=`translateY(${60-24*out}px) scale(${1-.03*out})`;s.draw(t,s.q,s.qa);});
+  $('#dnum').textContent=`[ ${String(idx+1).padStart(2,'0')} / ${SC.length} ]`;
+  $('#grain').style.transform=`translate(${(R(Math.floor(t*12))*60)|0}px,${(R(Math.floor(t*12)+99)*60)|0}px)`;
+  T($('#glow'),{x:Math.sin(t*.4)*60,y:Math.cos(t*.3)*40,o:on?1:0});
+}
+window.render=render;window.DURATION=73.47;
+
+/* ================= превью: пробел — пауза, ←/→ — ±1с, ?t=12.3 — стоп-кадр ================= */
+const qs=new URLSearchParams(location.search);
+function fit(){const s=Math.min(innerWidth/1080,innerHeight/1040);$('#stage').style.transform=`scale(${s})`;}
+if(!qs.has('render')){
+  addEventListener('resize',fit);fit();
+  let t0=performance.now()/1000-(+qs.get('t')||0),paused=qs.has('t'),tp=+qs.get('t')||0;
+  addEventListener('keydown',e=>{const now=performance.now()/1000;
+    if(e.code=='Space'){paused=!paused;if(!paused)t0=now-tp;}
+    if(e.code=='ArrowRight'){tp+=1;t0-=1;} if(e.code=='ArrowLeft'){tp=Math.max(0,tp-1);t0+=1;}});
+  (function loop(){const now=performance.now()/1000;if(!paused){tp=(now-t0)%window.DURATION;}
+    render(tp);$('#hud').textContent=tp.toFixed(2)+'s'+(paused?' · пауза':'');requestAnimationFrame(loop);})();
+}else{$('#hud').remove();}
+</script>
+</body>
+</html>
